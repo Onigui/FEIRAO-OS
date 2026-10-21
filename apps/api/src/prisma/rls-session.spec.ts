@@ -1,5 +1,9 @@
 import { runWithRequestContext } from '../observability/request-context';
-import { runWithRlsBypass } from './rls-context';
+import {
+  runWithRlsBypass,
+  runWithRlsPublicRead,
+  runWithoutRlsPublicRead,
+} from './rls-context';
 import { applyRlsSessionGuc } from './rls-session';
 
 describe('applyRlsSessionGuc (8B)', () => {
@@ -54,5 +58,53 @@ describe('applyRlsSessionGuc (8B)', () => {
     await applyRlsSessionGuc(tx);
     // empty string path uses literal '', not a bound param — just ensure 2 calls
     expect(tx.$executeRaw).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('applyRlsSessionGuc — public read (Vitrine e Feirões)', () => {
+  function capture() {
+    const calls: { sql: string; params: unknown[] }[] = [];
+    const tx = {
+      $executeRaw: jest.fn(
+        async (strings: TemplateStringsArray, ...params: unknown[]) => {
+          calls.push({ sql: strings.join('?'), params });
+          return 1;
+        },
+      ),
+    };
+    return { tx, calls };
+  }
+
+  it('defaults public_read to off', async () => {
+    const { tx, calls } = capture();
+    await applyRlsSessionGuc(tx);
+    expect(calls[0].sql).toContain('app.public_read');
+    expect(calls[0].params).toEqual(['off']);
+  });
+
+  it('turns public_read on inside runWithRlsPublicRead', async () => {
+    const { tx, calls } = capture();
+    await runWithRlsPublicRead(() => applyRlsSessionGuc(tx));
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(2);
+    expect(calls[0].params).toEqual(['on']);
+  });
+
+  it('runWithoutRlsPublicRead overrides an outer public read', async () => {
+    const { tx, calls } = capture();
+    await runWithRlsPublicRead(() =>
+      runWithoutRlsPublicRead(() => applyRlsSessionGuc(tx)),
+    );
+    expect(calls[0].params).toEqual(['off']);
+  });
+
+  it('bypass forces public_read off', async () => {
+    const { tx, calls } = capture();
+    await runWithRlsPublicRead(() =>
+      runWithRlsBypass(() => applyRlsSessionGuc(tx)),
+    );
+    expect(calls[0].sql).toContain("'on'");
+    expect(calls[0].sql).toContain(
+      "set_config('app.public_read', 'off', true)",
+    );
   });
 });

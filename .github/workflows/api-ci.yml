@@ -2,7 +2,7 @@ name: API CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
     paths:
       - 'apps/api/**'
       - '.github/workflows/api-ci.yml'
@@ -82,6 +82,11 @@ jobs:
 
       - name: Seed test fixtures
         run: npm run seed:test
+
+      # Vitrine e Feirões: migrations são escritas à mão (padrão do repo).
+      # Falha se o Prisma ainda quiser mudar objetos da Vitrine/Feirões no banco migrado.
+      - name: Prisma drift (Vitrine e Feirões)
+        run: bash scripts/check-vitrine-drift.sh
 
       - name: E2E tests
         # Serial: suites share seeded users; auth logout-all would race parallel workers.
