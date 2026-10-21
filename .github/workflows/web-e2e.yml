@@ -1,7 +1,7 @@
 name: Web E2E
 
 # Vitrine e Feirões — testes de navegador (Playwright, viewport de celular)
-# contra a stack real: API (NestJS) + Postgres + Redis + MinIO (no lugar do R2) + Web (Next.js).
+# contra a stack real: API (NestJS) + Postgres + Redis + S3 local (moto, no lugar do R2) + Web (Next.js).
 
 on:
   push:
@@ -54,12 +54,12 @@ jobs:
       SEED_PROFILE: test
       PORT: '3001'
       R2_ENDPOINT: http://localhost:9000
-      R2_ACCESS_KEY_ID: minioadmin
-      R2_SECRET_ACCESS_KEY: minioadmin
+      R2_ACCESS_KEY_ID: testing
+      R2_SECRET_ACCESS_KEY: testing
       R2_BUCKET: autopilot-media
       R2_PUBLIC_BASE_URL: http://localhost:9000/autopilot-media
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ACCESS_KEY_ID: testing
+      AWS_SECRET_ACCESS_KEY: testing
       AWS_DEFAULT_REGION: us-east-1
       NEXT_TELEMETRY_DISABLED: '1'
       NEXT_PUBLIC_API_BASE_URL: /backend
@@ -79,20 +79,18 @@ jobs:
             apps/api/package-lock.json
             apps/web/package-lock.json
 
-      - name: Start MinIO (S3 compatível, no lugar do R2)
+      - name: Start S3 local (moto, no lugar do R2)
         run: |
-          docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+          python3 -m venv /tmp/s3venv
+          /tmp/s3venv/bin/pip install -q "moto[server]==5.1.4"
+          nohup /tmp/s3venv/bin/python -m moto.server -H 0.0.0.0 -p 9000 > /tmp/s3.log 2>&1 &
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:9000/minio/health/live && break
+            curl -fsS -o /dev/null http://localhost:9000/moto-api/ && break
             sleep 1
           done
           aws --endpoint-url http://localhost:9000 s3 mb s3://autopilot-media
-          cat > /tmp/policy.json <<'JSON'
-          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::autopilot-media/*"]}]}
-          JSON
-          aws --endpoint-url http://localhost:9000 s3api put-bucket-policy --bucket autopilot-media --policy file:///tmp/policy.json
+          aws --endpoint-url http://localhost:9000 s3api put-bucket-policy --bucket autopilot-media \
+            --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::autopilot-media/*"]}]}'
 
       - name: API — install, migrate, seed, build
         working-directory: apps/api
@@ -137,4 +135,4 @@ jobs:
         run: |
           echo "::group::api.log"; tail -n 200 /tmp/api.log || true; echo "::endgroup::"
           echo "::group::web.log"; tail -n 200 /tmp/web.log || true; echo "::endgroup::"
-          docker logs minio --tail 100 || true
+          echo "::group::s3.log"; tail -n 100 /tmp/s3.log || true; echo "::endgroup::"
