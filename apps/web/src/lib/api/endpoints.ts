@@ -66,6 +66,23 @@ export const endpoints = {
   },
   settings: {
     company: "/api/settings/company",
+    showcase: "/api/settings/company/showcase",
+  },
+  inventory: {
+    vehicles: "/api/inventory/vehicles",
+    vehicle: (id: string) => `/api/inventory/vehicles/${id}`,
+    status: (id: string) => `/api/inventory/vehicles/${id}/status`,
+    statusHistory: (id: string) => `/api/inventory/vehicles/${id}/status-history`,
+    photoUploadUrl: (id: string) =>
+      `/api/inventory/vehicles/${id}/photos/upload-url`,
+    photos: (id: string) => `/api/inventory/vehicles/${id}/photos`,
+    photosOrder: (id: string) => `/api/inventory/vehicles/${id}/photos/order`,
+    photo: (id: string, photoId: string) =>
+      `/api/inventory/vehicles/${id}/photos/${photoId}`,
+    importTemplate: (format: "csv" | "xlsx") =>
+      `/api/inventory/import/template?format=${format}`,
+    importPreview: "/api/inventory/import/preview",
+    importCommit: "/api/inventory/import/commit",
   },
   setup: {
     status: "/api/setup/status",

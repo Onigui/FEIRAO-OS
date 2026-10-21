@@ -10,6 +10,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedUser } from '../auth/types/jwt-payload';
 import { CompaniesService } from './companies.service';
 import { UpdateCompanySettingsDto } from './dto/update-company-settings.dto';
+import { UpdateShowcaseSettingsDto } from './dto/update-showcase-settings.dto';
 
 @ApiTags('settings')
 @ApiBearerAuth()
@@ -36,6 +37,32 @@ export class CompanySettingsController {
     @Req() req: Request,
   ) {
     return this.companiesService.updateSettings(
+      user as AuthenticatedUser & { cid: string; sub: string },
+      dto,
+      { ip: req.ip, userAgent: req.headers['user-agent'] },
+    );
+  }
+
+  @Get('showcase')
+  @Roles(MembershipRole.OWNER, MembershipRole.ADMIN, MembershipRole.AGENT)
+  @ApiOperation({ summary: 'Vitrine: dados públicos da loja' })
+  getShowcase(@CurrentUser() user: AuthenticatedUser) {
+    return this.companiesService.getShowcase(
+      user as AuthenticatedUser & { cid: string; sub: string },
+    );
+  }
+
+  @Patch('showcase')
+  @Roles(MembershipRole.OWNER, MembershipRole.ADMIN)
+  @ApiOperation({
+    summary: 'Vitrine: atualiza dados públicos e liga/desliga (OWNER|ADMIN)',
+  })
+  updateShowcase(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateShowcaseSettingsDto,
+    @Req() req: Request,
+  ) {
+    return this.companiesService.updateShowcase(
       user as AuthenticatedUser & { cid: string; sub: string },
       dto,
       { ip: req.ip, userAgent: req.headers['user-agent'] },

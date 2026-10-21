@@ -26,6 +26,8 @@ import {
   Upload,
   Megaphone,
   Flag,
+  Car,
+  Store,
 } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { canAccessNav, type NavItemId } from "@/lib/auth/rbac";
@@ -46,6 +48,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { id: "dashboard", href: "/dashboard", label: "Painel", icon: LayoutDashboard, group: "ops" },
+  { id: "inventory", href: "/inventory", label: "Estoque", icon: Car, group: "ops" },
   { id: "leads", href: "/leads", label: "Leads", icon: Users, group: "ops" },
   { id: "conversations", href: "/conversations", label: "Conversas", icon: MessageSquare, group: "ops" },
   { id: "follow-ups", href: "/follow-ups", label: "Follow-ups", icon: CalendarClock, group: "ops" },
@@ -54,6 +57,7 @@ const NAV: NavItem[] = [
   { id: "team", href: "/team", label: "Equipe", icon: Users, group: "admin" },
   { id: "users", href: "/users", label: "Usuários", icon: UserCog, group: "admin" },
   { id: "settings", href: "/settings", label: "Configurações", icon: Settings, group: "admin" },
+  { id: "showcase-settings", href: "/settings/showcase", label: "Vitrine da loja", icon: Store, group: "admin" },
   { id: "ai-settings", href: "/ai/settings", label: "Agente de IA", icon: Bot, group: "admin" },
   {
     id: "ai-dashboard",

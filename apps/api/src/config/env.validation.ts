@@ -67,6 +67,8 @@ export const envValidationSchema = Joi.object({
   R2_ACCESS_KEY_ID: Joi.string().allow('').optional(),
   R2_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
   R2_BUCKET: Joi.string().allow('').optional(),
+  /** Opcional: endpoint S3 compatível (ex.: MinIO no CI). Sem ele, usa o endpoint do R2. */
+  R2_ENDPOINT: Joi.string().uri({ allowRelative: false }).allow('').optional(),
   R2_PUBLIC_BASE_URL: Joi.string()
     .uri({ allowRelative: false })
     .allow('')

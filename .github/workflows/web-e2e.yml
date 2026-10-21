@@ -1,0 +1,140 @@
+name: Web E2E
+
+# Vitrine e Feirões — testes de navegador (Playwright, viewport de celular)
+# contra a stack real: API (NestJS) + Postgres + Redis + MinIO (no lugar do R2) + Web (Next.js).
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'apps/**'
+      - '.github/workflows/web-e2e.yml'
+  pull_request:
+    paths:
+      - 'apps/**'
+      - '.github/workflows/web-e2e.yml'
+
+jobs:
+  e2e:
+    name: playwright · celular
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: autopilot
+          POSTGRES_PASSWORD: autopilot
+          POSTGRES_DB: autopilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U autopilot -d autopilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://autopilot:autopilot@localhost:5432/autopilot?schema=public
+      JWT_ACCESS_SECRET: ci-test-jwt-access-secret-32chars
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      SWAGGER_ENABLED: 'false'
+      SEED_PROFILE: test
+      PORT: '3001'
+      R2_ENDPOINT: http://localhost:9000
+      R2_ACCESS_KEY_ID: minioadmin
+      R2_SECRET_ACCESS_KEY: minioadmin
+      R2_BUCKET: autopilot-media
+      R2_PUBLIC_BASE_URL: http://localhost:9000/autopilot-media
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_API_BASE_URL: /backend
+      API_INTERNAL_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/web/package-lock.json
+
+      - name: Start MinIO (S3 compatível, no lugar do R2)
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:9000/minio/health/live && break
+            sleep 1
+          done
+          aws --endpoint-url http://localhost:9000 s3 mb s3://autopilot-media
+          cat > /tmp/policy.json <<'JSON'
+          {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::autopilot-media/*"]}]}
+          JSON
+          aws --endpoint-url http://localhost:9000 s3api put-bucket-policy --bucket autopilot-media --policy file:///tmp/policy.json
+
+      - name: API — install, migrate, seed, build
+        working-directory: apps/api
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npm run seed:test
+          npm run build
+
+      - name: API — start
+        working-directory: apps/api
+        run: |
+          nohup node dist/main > /tmp/api.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:3001/health && break
+            sleep 1
+          done
+          curl -fsS http://localhost:3001/health
+
+      - name: Web — install, build, start
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+          nohup npm run start -- -p 3000 > /tmp/web.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS -o /dev/null http://localhost:3000/login && break
+            sleep 1
+          done
+
+      - name: Playwright — browsers
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright — testes
+        working-directory: apps/web
+        run: npm run e2e
+
+      - name: Logs em caso de falha
+        if: failure()
+        run: |
+          echo "::group::api.log"; tail -n 200 /tmp/api.log || true; echo "::endgroup::"
+          echo "::group::web.log"; tail -n 200 /tmp/web.log || true; echo "::endgroup::"
+          docker logs minio --tail 100 || true

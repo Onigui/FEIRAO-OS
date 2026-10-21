@@ -2,6 +2,10 @@ export type Crumb = { label: string; href?: string };
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Painel",
+  "/inventory": "Estoque",
+  "/inventory/new": "Cadastrar carro",
+  "/inventory/import": "Importar planilha",
+  "/settings/showcase": "Vitrine da loja",
   "/leads": "Leads",
   "/conversations": "Conversas",
   "/follow-ups": "Follow-ups",
@@ -28,6 +32,7 @@ const TITLES: Record<string, string> = {
 export function pageTitleForPath(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname];
   if (pathname.startsWith("/leads/")) return "Detalhe do lead";
+  if (pathname.startsWith("/inventory/")) return "Carro";
   if (pathname.startsWith("/conversations/")) return "Conversa";
   if (pathname.startsWith("/follow-ups/")) return "Follow-up";
   return "Autopilot";
@@ -38,6 +43,19 @@ export function breadcrumbsForPath(pathname: string): Crumb[] {
 
   if (pathname === "/dashboard") {
     return [{ label: "Painel" }];
+  }
+  if (pathname === "/inventory") return [home, { label: "Estoque" }];
+  if (pathname === "/inventory/new") {
+    return [home, { label: "Estoque", href: "/inventory" }, { label: "Cadastrar" }];
+  }
+  if (pathname === "/inventory/import") {
+    return [home, { label: "Estoque", href: "/inventory" }, { label: "Importar" }];
+  }
+  if (pathname.startsWith("/inventory/")) {
+    return [home, { label: "Estoque", href: "/inventory" }, { label: "Carro" }];
+  }
+  if (pathname === "/settings/showcase") {
+    return [home, { label: "Configurações", href: "/settings" }, { label: "Vitrine" }];
   }
   if (pathname === "/leads") {
     return [home, { label: "Leads" }];
