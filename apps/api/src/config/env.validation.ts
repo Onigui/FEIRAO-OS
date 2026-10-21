@@ -62,6 +62,21 @@ export const envValidationSchema = Joi.object({
     .allow('')
     .optional(),
 
+  /** Vitrine e Feirões — Cloudflare R2 (S3 API). Opcional: sem R2, upload responde 503. */
+  R2_ACCOUNT_ID: Joi.string().allow('').optional(),
+  R2_ACCESS_KEY_ID: Joi.string().allow('').optional(),
+  R2_SECRET_ACCESS_KEY: Joi.string().allow('').optional(),
+  R2_BUCKET: Joi.string().allow('').optional(),
+  R2_PUBLIC_BASE_URL: Joi.string()
+    .uri({ allowRelative: false })
+    .allow('')
+    .optional(),
+  R2_UPLOAD_URL_TTL_SECONDS: Joi.number()
+    .integer()
+    .min(60)
+    .max(3600)
+    .default(300),
+
   /**
    * P0: obrigatório fora de test. Em test, default seguro para CI/Jest.
    * Nunca aceita o fallback histórico de desenvolvimento.
