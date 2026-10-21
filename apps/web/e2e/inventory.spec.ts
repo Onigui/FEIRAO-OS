@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectToast, login, solidPng } from "./helpers";
+import { expectToast, gotoAuthed, login, solidPng } from "./helpers";
 
 test.describe("Estoque — celular", () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe("Estoque — celular", () => {
   test("cadastra carro com 2 fotos, marca vendido e vê o histórico", async ({ page }) => {
     const model = `Gol E2E ${Date.now().toString().slice(-6)}`;
 
-    await page.goto("/inventory/new");
+    await gotoAuthed(page, "/inventory/new");
     await page.getByLabel("Marca", { exact: true }).fill("Volkswagen");
     await page.getByLabel("Modelo", { exact: true }).fill(model);
     await page.getByLabel("Ano de fabricação", { exact: true }).fill("2020");
@@ -46,7 +46,7 @@ test.describe("Estoque — celular", () => {
     await expect(page.getByTestId("status-history")).toContainText("Disponível → Vendido");
 
     // Na lista, o filtro "Vendido" mostra o carro.
-    await page.goto("/inventory");
+    await gotoAuthed(page, "/inventory");
     await page.getByLabel("Filtrar por status", { exact: true }).click();
     await page.getByRole("option", { name: "Vendido", exact: true }).click();
     await page.getByPlaceholder("Buscar marca, modelo ou versão").fill(model);
@@ -55,7 +55,7 @@ test.describe("Estoque — celular", () => {
 
   test("marca vendido com 1 toque direto na lista", async ({ page }) => {
     const model = `Uno Lista ${Date.now().toString().slice(-6)}`;
-    await page.goto("/inventory/new");
+    await gotoAuthed(page, "/inventory/new");
     await page.getByLabel("Marca", { exact: true }).fill("Fiat");
     await page.getByLabel("Modelo", { exact: true }).fill(model);
     await page.getByLabel("Ano de fabricação", { exact: true }).fill("2018");
@@ -65,7 +65,7 @@ test.describe("Estoque — celular", () => {
     await page.getByRole("button", { name: "Salvar e adicionar fotos" }).click();
     await page.waitForURL(/\/inventory\/[0-9a-f-]{36}$/);
 
-    await page.goto("/inventory");
+    await gotoAuthed(page, "/inventory");
     await page.getByPlaceholder("Buscar marca, modelo ou versão").fill(model);
     const card = page.getByTestId("vehicle-list").locator("li").filter({ hasText: model });
     await expect(card).toHaveCount(1);
@@ -88,7 +88,7 @@ test.describe("Estoque — celular", () => {
     lines[10] = `;SemMarca;2019;2020;R$ 45.000,00;30.000;manual;flex`;
     lines[20] = `${tag};Cambio;2019;2020;R$ 45.000,00;30.000;sequencial;flex`;
 
-    await page.goto("/inventory/import");
+    await gotoAuthed(page, "/inventory/import");
     await page.getByTestId("import-file-input").setInputFiles({
       name: "estoque.csv",
       mimeType: "text/csv",
@@ -103,13 +103,13 @@ test.describe("Estoque — celular", () => {
     await page.getByRole("button", { name: "Importar 47 carros" }).click();
     await expect(page.getByTestId("import-done")).toContainText("47 carros importados");
 
-    await page.goto("/inventory");
+    await gotoAuthed(page, "/inventory");
     await page.getByPlaceholder("Buscar marca, modelo ou versão").fill(tag);
     await expect(page.getByText("47 carros")).toBeVisible();
   });
 
   test("configura e ativa a vitrine da loja", async ({ page }) => {
-    await page.goto("/settings/showcase");
+    await gotoAuthed(page, "/settings/showcase");
     await expect(page.getByTestId("showcase-url")).toContainText("/vitrine/");
     await page.getByLabel("WhatsApp da loja", { exact: true }).fill("(14) 99999-0000");
     await page.getByLabel("Cidade", { exact: true }).fill("Botucatu");
