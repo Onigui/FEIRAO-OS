@@ -134,5 +134,10 @@ jobs:
         if: failure()
         run: |
           echo "::group::api.log"; tail -n 200 /tmp/api.log || true; echo "::endgroup::"
+          # anotações legíveis sem login (API pública de check-runs)
+          for f in /tmp/api.log /tmp/web.log; do
+            [ -f "$f" ] && echo "::error title=$(basename $f)::$(tail -c 3000 "$f" | tr '\n' ' ' | sed 's/%/%25/g')"
+          done
+          [ -f apps/web/test-results/.last-run.json ] && echo "::error title=playwright::$(cat apps/web/test-results/.last-run.json | tr '\n' ' ')"
           echo "::group::web.log"; tail -n 200 /tmp/web.log || true; echo "::endgroup::"
           echo "::group::s3.log"; tail -n 100 /tmp/s3.log || true; echo "::endgroup::"
