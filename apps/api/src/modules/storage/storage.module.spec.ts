@@ -40,4 +40,19 @@ describe('StorageModule', () => {
     expect(endpoint?.hostname).toBe('acc123.r2.cloudflarestorage.com');
     expect(moduleRef.get(StorageService).isConfigured()).toBe(true);
   });
+
+  it('com R2_ENDPOINT: usa o endpoint informado em modo path-style (MinIO)', async () => {
+    const moduleRef = await build({
+      endpoint: 'http://localhost:9000',
+      accessKeyId: 'key',
+      secretAccessKey: 'secret',
+      bucket: 'autopilot-media',
+      publicBaseUrl: 'http://localhost:9000/autopilot-media',
+    });
+    const client = moduleRef.get<S3Client>(STORAGE_S3_CLIENT);
+    const endpoint = await client.config.endpoint?.();
+    expect(endpoint?.hostname).toBe('localhost');
+    expect(endpoint?.port).toBe(9000);
+    expect(client.config.forcePathStyle).toBe(true);
+  });
 });

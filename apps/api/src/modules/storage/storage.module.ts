@@ -19,12 +19,20 @@ import { StorageService } from './storage.service';
         const secretAccessKey = config.get<string>(
           'storage.r2.secretAccessKey',
         );
-        if (!accountId || !accessKeyId || !secretAccessKey) {
+        const customEndpoint = config.get<string>('storage.r2.endpoint');
+        if (
+          !accessKeyId ||
+          !secretAccessKey ||
+          (!accountId && !customEndpoint)
+        ) {
           return null;
         }
         return new S3Client({
           region: 'auto',
-          endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+          endpoint:
+            customEndpoint ?? `https://${accountId}.r2.cloudflarestorage.com`,
+          // MinIO e outros compatíveis usam URL com o bucket no caminho.
+          forcePathStyle: Boolean(customEndpoint),
           credentials: { accessKeyId, secretAccessKey },
         });
       },

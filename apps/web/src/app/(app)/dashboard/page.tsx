@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { fetchDashboard } from "@/features/dashboard/api";
+import { InventorySummaryCard } from "@/features/inventory/inventory-summary-card";
 import { LEAD_STATUS_LABEL } from "@/features/leads/constants";
 import type { LeadStatus } from "@/lib/api/types";
 import { breadcrumbsForPath } from "@/lib/nav";
@@ -66,7 +67,8 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <InventorySummaryCard />
         <Kpi label="Total de leads" value={overview.totalLeads} />
         <Kpi label="Conversas abertas" value={conversations.openConversations} />
         <Kpi label="Follow-ups pendentes" value={followUps.pending} />

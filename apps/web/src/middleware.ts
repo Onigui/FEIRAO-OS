@@ -26,6 +26,8 @@ export const config = {
     "/team",
     "/users",
     "/settings",
+    "/settings/:path*",
+    "/inventory/:path*",
     "/ai/:path*",
     "/exports",
     "/diagnostics",

@@ -265,6 +265,7 @@ export default () => {
         accessKeyId: process.env.R2_ACCESS_KEY_ID || undefined,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || undefined,
         bucket: process.env.R2_BUCKET || undefined,
+        endpoint: process.env.R2_ENDPOINT || undefined,
         publicBaseUrl: process.env.R2_PUBLIC_BASE_URL || undefined,
         uploadUrlTtlSeconds: parseInt(
           process.env.R2_UPLOAD_URL_TTL_SECONDS ?? '300',
