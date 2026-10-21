@@ -58,7 +58,7 @@ test.describe("Vitrine pública — celular", () => {
     await card.click();
     await pub.waitForURL(`**${publicHref}`);
     await expect(pub.getByTestId("vehicle-title")).toContainText(model);
-    await expect(pub.getByText("R$ 72.500")).toBeVisible();
+    await expect(pub.getByText("R$ 72.500", { exact: true })).toBeVisible();
     const wa = await pub.getByTestId("whatsapp-button").getAttribute("href");
     expect(wa).toContain("https://wa.me/5514999990000?text=");
     expect(decodeURIComponent(wa ?? "")).toContain(model);
