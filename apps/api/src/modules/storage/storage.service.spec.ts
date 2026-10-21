@@ -5,6 +5,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   type S3Client,
 } from '@aws-sdk/client-s3';
@@ -169,6 +170,43 @@ describe('StorageService', () => {
     it('builds the public URL without double slashes', () => {
       expect(service.publicUrl('vehicles/c1/v1/photo.jpg')).toBe(
         'https://media.example.com/vehicles/c1/v1/photo.jpg',
+      );
+    });
+
+    it('headObject returns size and type', async () => {
+      send.mockResolvedValueOnce({
+        ContentLength: 42,
+        ContentType: 'image/jpeg',
+      });
+      await expect(service.headObject('vehicles/c1/v1/a.jpg')).resolves.toEqual(
+        {
+          contentLength: 42,
+          contentType: 'image/jpeg',
+        },
+      );
+      expect(send.mock.calls[0][0]).toBeInstanceOf(HeadObjectCommand);
+    });
+
+    it('headObject returns null when the object does not exist', async () => {
+      send.mockRejectedValueOnce(
+        Object.assign(new Error('nf'), {
+          name: 'NotFound',
+          $metadata: { httpStatusCode: 404 },
+        }),
+      );
+      await expect(
+        service.headObject('vehicles/c1/v1/a.jpg'),
+      ).resolves.toBeNull();
+    });
+
+    it('headObject rethrows other errors', async () => {
+      send.mockRejectedValueOnce(
+        Object.assign(new Error('boom'), {
+          $metadata: { httpStatusCode: 500 },
+        }),
+      );
+      await expect(service.headObject('vehicles/c1/v1/a.jpg')).rejects.toThrow(
+        'boom',
       );
     });
 

@@ -1,6 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { getTenantCompanyId } from '../../core/tenancy/tenant-als';
-import { getRlsTxDepth, isRlsBypass, runWithRlsTxDepth } from '../rls-context';
+import {
+  getRlsTxDepth,
+  isRlsBypass,
+  isRlsPublicRead,
+  runWithRlsTxDepth,
+} from '../rls-context';
 import { applyRlsSessionGuc } from '../rls-session';
 
 type ExecuteRawClient = {
@@ -55,9 +60,10 @@ export function createRlsSessionExtension(domainClient: DomainClient) {
           // Array form keeps caller result indices — strip GUC preamble rows.
           const companyId = getTenantCompanyId() ?? '';
           const bypass = isRlsBypass() ? 'on' : 'off';
+          const publicRead = !isRlsBypass() && isRlsPublicRead() ? 'on' : 'off';
           const ops = input as unknown[];
           const batch = [
-            domainClient.$executeRaw`SELECT set_config('app.rls_bypass', ${bypass}, true)`,
+            domainClient.$executeRaw`SELECT set_config('app.rls_bypass', ${bypass}, true), set_config('app.public_read', ${publicRead}, true)`,
             domainClient.$executeRaw`SELECT set_config('app.company_id', ${companyId}, true)`,
             ...ops,
           ];

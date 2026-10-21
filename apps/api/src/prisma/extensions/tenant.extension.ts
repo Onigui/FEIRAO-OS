@@ -31,6 +31,11 @@ export const TENANT_SCOPED_MODELS = [
   'companyFirstTouchSettings',
   'outboundCampaign',
   'outboundCampaignLead',
+  // Vitrine e Feirões — fair* e showcaseAnalyticsEvent ficam de fora de propósito (acesso entre lojas via RLS).
+  'vehicle',
+  'vehiclePhoto',
+  'vehicleStatusTransition',
+  'leadVehicleInterest',
 ] as const;
 
 export type TenantScopedModel = (typeof TENANT_SCOPED_MODELS)[number];

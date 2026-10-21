@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   DeleteObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   type S3Client,
 } from '@aws-sdk/client-s3';
@@ -110,6 +111,31 @@ export class StorageService {
     this.assertValidKey(key);
     const encoded = key.split('/').map(encodeURIComponent).join('/');
     return `${this.publicBaseUrl}/${encoded}`;
+  }
+
+  /** Metadados do objeto, ou null se não existir (confirma que o upload aconteceu). */
+  async headObject(
+    key: string,
+  ): Promise<{ contentLength: number; contentType: string | null } | null> {
+    const { client, bucket } = this.requireConfigured();
+    this.assertValidKey(key);
+    try {
+      const res = await client.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: key }),
+      );
+      return {
+        contentLength: res.ContentLength ?? 0,
+        contentType: res.ContentType ?? null,
+      };
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } })
+        .$metadata?.httpStatusCode;
+      const name = (error as { name?: string }).name;
+      if (status === 404 || name === 'NotFound' || name === 'NoSuchKey') {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async deleteObject(key: string): Promise<void> {

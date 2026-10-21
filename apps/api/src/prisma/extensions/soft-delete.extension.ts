@@ -35,6 +35,8 @@ export const SOFT_DELETE_MODELS = [
   'companyFirstTouchSettings',
   'outboundCampaign',
   'outboundCampaignLead',
+  'vehicle',
+  'fair',
 ] as const;
 
 export type SoftDeleteModel = (typeof SOFT_DELETE_MODELS)[number];
