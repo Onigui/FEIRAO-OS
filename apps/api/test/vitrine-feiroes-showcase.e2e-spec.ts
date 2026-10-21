@@ -70,6 +70,8 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
       });
 
   beforeAll(async () => {
+    // Muitos contatos seguidos neste arquivo; o limite real é testado no fim.
+    process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1000';
     app = await createE2eApp();
     token = await authAs(app);
     const company = await db.company.findFirstOrThrow({
@@ -442,5 +444,15 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
       (stats.body as { whatsappClicksWeek: number }).whatsappClicksWeek,
     ).toBeGreaterThanOrEqual(1);
     await api().get('/api/showcase/stats').expect(401);
+  });
+
+  it('limita contatos por IP (429)', async () => {
+    const v = await createVehicle('Limite');
+    process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1';
+    try {
+      await interest({ vehicleSlug: v.slug, phone: '1' }).expect(429);
+    } finally {
+      process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1000';
+    }
   });
 });
