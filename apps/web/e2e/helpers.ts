@@ -4,45 +4,63 @@ import { expect, type Page } from "@playwright/test";
 export const OWNER_EMAIL = process.env.E2E_OWNER_EMAIL ?? "owner@test.autopilot.dev";
 export const OWNER_PASSWORD = process.env.E2E_PASSWORD ?? "Demo@12345";
 
-export async function login(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("E-mail", { exact: true }).fill(OWNER_EMAIL);
-  await page.getByLabel("Senha", { exact: true }).fill(OWNER_PASSWORD);
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await page.waitForURL("**/dashboard");
+const apiLog = new WeakMap<Page, string[]>();
+
+/** Registra todas as respostas de erro da API nesta página (para diagnóstico). */
+function trackApi(page: Page): string[] {
+  const existing = apiLog.get(page);
+  if (existing) return existing;
+  const log: string[] = [];
+  apiLog.set(page, log);
+  page.on("response", (res) => {
+    if (res.url().includes("/backend/") && res.status() >= 400) {
+      log.push(`${res.status()} ${res.request().method()} ${new URL(res.url()).pathname}`);
+    }
+  });
+  page.on("requestfailed", (req) => {
+    if (req.url().includes("/backend/")) {
+      log.push(`FALHOU ${req.method()} ${new URL(req.url()).pathname} ${req.failure()?.errorText ?? ""}`);
+    }
+  });
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) log.push(`→ ${new URL(frame.url()).pathname}`);
+  });
+  return log;
 }
 
-/**
- * Navegação com recarga completa numa página logada. Se a sessão cair e a
- * página voltar para /login, falha mostrando as respostas de erro da API
- * (o relatório do CI fica legível sem baixar o trace).
- */
-export async function gotoAuthed(page: Page, path: string) {
-  const failures: string[] = [];
-  const onResponse = (res: import("@playwright/test").Response) => {
-    if (res.url().includes("/backend/") && res.status() >= 400) {
-      failures.push(`${res.status()} ${res.request().method()} ${new URL(res.url()).pathname}`);
-    }
-  };
-  const onFailed = (req: import("@playwright/test").Request) => {
-    if (req.url().includes("/backend/")) {
-      failures.push(`FALHOU ${req.method()} ${new URL(req.url()).pathname} ${req.failure()?.errorText ?? ""}`);
-    }
-  };
-  page.on("response", onResponse);
-  page.on("requestfailed", onFailed);
-  await page.goto(path);
-  // Espera o fim da checagem de sessão: ou o menu logado aparece, ou volta para /login.
+/** Espera o fim da checagem de sessão: ou o menu logado aparece, ou volta para /login. */
+async function waitAuthSettled(page: Page) {
   await page.waitForFunction(
     () => location.pathname === "/login" || document.querySelector('a[href="/inventory"]') !== null,
     undefined,
     { timeout: 20_000 },
   );
-  page.off("response", onResponse);
-  page.off("requestfailed", onFailed);
+}
+
+function assertLoggedIn(page: Page, what: string) {
   if (new URL(page.url()).pathname === "/login") {
-    throw new Error(`Sessão perdida ao abrir ${path}. Respostas da API: ${failures.join(" | ") || "nenhum erro"}`);
+    const log = apiLog.get(page) ?? [];
+    throw new Error(`Sessão perdida ${what}. Linha do tempo: ${log.join(" | ") || "vazia"}`);
   }
+}
+
+export async function login(page: Page) {
+  trackApi(page);
+  await page.goto("/login");
+  await page.getByLabel("E-mail", { exact: true }).fill(OWNER_EMAIL);
+  await page.getByLabel("Senha", { exact: true }).fill(OWNER_PASSWORD);
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.waitForURL("**/dashboard");
+  await waitAuthSettled(page);
+  assertLoggedIn(page, "logo após o login");
+}
+
+/** Navegação com recarga completa numa página logada. */
+export async function gotoAuthed(page: Page, path: string) {
+  trackApi(page);
+  await page.goto(path);
+  await waitAuthSettled(page);
+  assertLoggedIn(page, `ao abrir ${path}`);
 }
 
 /** PNG sólido gerado em memória (sem arquivos binários no repo). */
