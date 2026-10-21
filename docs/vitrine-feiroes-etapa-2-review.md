@@ -34,6 +34,8 @@ O build da API gerava `dist/src/main.js`, mas `start:prod` e o `Dockerfile` exec
 3. Importar planilha com 50 linhas, 3 com erro (linhas 6, 11 e 21) → 47 importados.
 4. Ativar a vitrine da loja.
 
+Os testes esperam o menu logado aparecer antes de trocar de página. Sem isso, a navegação interrompia a seleção da loja e a sessão se perdia (só no teste: uma pessoa não troca de página em milissegundos).
+
 No CI, o R2 é substituído por um S3 local (moto). A imagem do MinIO não estava disponível no Docker Hub.
 
 ## Verificação
@@ -43,7 +45,13 @@ No CI, o R2 é substituído por um S3 local (moto). A imagem do MinIO não estav
 | Testes unitários da API | ambiente de desenvolvimento | 77 suítes, 477 testes passando (antes: 470) |
 | Tipos, lint e build da web | ambiente de desenvolvimento | OK |
 | URL assinada → upload → HeadObject → leitura pública no S3 local | ambiente de desenvolvimento | OK |
-| API CI, Web CI, Web E2E | GitHub Actions | ver mensagem do PR |
+| API CI (inclui e2e de RLS e estoque) | GitHub Actions | OK |
+| Web CI (tipos, lint, build) | GitHub Actions | OK |
+| Web E2E: 4 testes no celular contra a stack real | GitHub Actions | 4 de 4 passando, sem nova tentativa |
+
+## Para a etapa 5 (deploy)
+
+- O limite de requisições da API é de 120 por minuto **por IP**. A web chama a API por um proxy (`/backend`), então em produção todas as lojas podem chegar com o mesmo IP. Antes do deploy é preciso confiar no IP real (`X-Forwarded-For`) ou ajustar o limite.
 
 ## Fora desta etapa
 
