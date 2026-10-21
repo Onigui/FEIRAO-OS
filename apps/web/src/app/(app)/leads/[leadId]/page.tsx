@@ -12,6 +12,7 @@ import { getLead, updateLead } from "@/features/leads/api";
 import { LeadStatusBadge } from "@/features/leads/lead-status-badge";
 import { LEAD_STATUSES, LEAD_STATUS_LABEL } from "@/features/leads/constants";
 import { LeadAssignCard } from "@/features/leads/lead-assign-card";
+import { LeadVehicleInterestsCard } from "@/features/showcase/lead-interests";
 import { LeadNotesPanel } from "@/features/leads/lead-notes-panel";
 import { LeadActivitiesPanel } from "@/features/leads/lead-activities-panel";
 import { LeadTimelinePanel } from "@/features/leads/lead-timeline-panel";
@@ -298,6 +299,7 @@ export default function LeadDetailPage() {
           <div className="space-y-6">
             <NbaRecommendedActionCard leadId={lead.id} />
             <PurchaseIntentCard leadId={lead.id} />
+            <LeadVehicleInterestsCard leadId={lead.id} />
             <LeadAssignCard lead={lead} />
             <LeadStatusHistory leadId={lead.id} />
             <Card className="bg-white/90">

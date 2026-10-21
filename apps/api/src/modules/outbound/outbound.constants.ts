@@ -51,6 +51,8 @@ export const OUTBOUND_BLOCK_REASONS = {
   MIN_SPACING: 'MIN_SPACING',
   OUTSIDE_ALLOWED_HOURS: 'OUTSIDE_ALLOWED_HOURS',
   PROTECTION_DISABLED_SKIP_CAPS: 'PROTECTION_DISABLED_SKIP_CAPS',
+  /** Vitrine e Feirões: lead da vitrine sem autorização de ofertas. */
+  SHOWCASE_NO_MARKETING_CONSENT: 'SHOWCASE_NO_MARKETING_CONSENT',
 } as const;
 
 export type OutboundBlockReason =

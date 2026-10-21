@@ -19,6 +19,7 @@ const AUDIT_WHITELIST = new Set([
   'LEAD_UNASSIGN',
   'LEAD_DELETE',
   'LEAD_AUTO_CREATED',
+  'SHOWCASE_INTEREST_CREATED',
   'LEAD_STATUS_CHANGE',
   'LEAD_BULK_ASSIGN',
   'NOTE_CREATE',
@@ -270,7 +271,10 @@ export class LeadTimelineService {
         itemType: `AUDIT_${audit.action}`,
         occurredAt: audit.occurredAt.toISOString(),
         actorUserId: audit.actorUserId,
-        summary: audit.action,
+        summary:
+          audit.action === 'SHOWCASE_INTEREST_CREATED'
+            ? 'Pediu contato pela vitrine'
+            : audit.action,
         payload: {
           action: audit.action,
           targetType: audit.targetType,

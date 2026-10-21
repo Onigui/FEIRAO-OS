@@ -38,6 +38,7 @@ import {
   OUTBOUND_FIRST_TOUCH_MESSAGE_SOURCE,
 } from '../outbound/outbound-first-touch.constants';
 import { OutboundFirstTouchService } from '../outbound/outbound-first-touch.service';
+import { ShowcaseConsentService } from '../showcase/showcase-consent.service';
 import { newCorrelationId } from '../whatsapp/correlation';
 import {
   FOLLOWUP_EXECUTING_TIMEOUT_MS,
@@ -114,6 +115,7 @@ export class FollowUpService {
     private readonly whatsappSend: WhatsappSendService,
     @Optional() private readonly aiRecovery?: AiRecoveryService,
     @Optional() private readonly firstTouch?: OutboundFirstTouchService,
+    @Optional() private readonly showcaseConsent?: ShowcaseConsentService,
   ) {}
 
   async create(
@@ -605,6 +607,24 @@ export class FollowUpService {
       };
     }
 
+    // Vitrine e Feirões — última barreira: lead da vitrine sem autorização de
+    // ofertas não recebe recuperação nem first-touch, mesmo já agendados.
+    if (
+      (existing.type === AI_RECOVERY_FOLLOWUP_TYPE ||
+        existing.type === OUTBOUND_FIRST_TOUCH_FOLLOWUP_TYPE) &&
+      (await this.showcaseConsent?.isBlockedForAutomation(
+        companyId,
+        existing.leadId,
+      ))
+    ) {
+      await this.cancelForMissingConsent(existing);
+      return {
+        outcome: 'skipped_terminal',
+        status: FollowUpStatus.CANCELLED,
+        correlationId,
+      };
+    }
+
     // 11D — Recovery: re-check stop conditions + regenerate body before send.
     if (
       existing.type === AI_RECOVERY_FOLLOWUP_TYPE &&
@@ -691,6 +711,32 @@ export class FollowUpService {
       // Pre-claim validation / disconnected / CB OPEN / 404 — processor decides retry.
       throw error;
     }
+  }
+
+  private async cancelForMissingConsent(followUp: FollowUp): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const res = await tx.followUp.updateMany({
+        where: { id: followUp.id, status: FollowUpStatus.SCHEDULED },
+        data: {
+          status: FollowUpStatus.CANCELLED,
+          cancelReason: 'SHOWCASE_NO_MARKETING_CONSENT',
+        },
+      });
+      if (res.count === 0) return;
+      await this.audit.write(tx, {
+        companyId: followUp.companyId,
+        actorUserId: null,
+        action: 'FOLLOWUP_CANCEL',
+        targetType: 'FOLLOWUP',
+        targetId: followUp.id,
+        before: { status: followUp.status },
+        after: {
+          status: FollowUpStatus.CANCELLED,
+          reason: 'SHOWCASE_NO_MARKETING_CONSENT',
+          leadId: followUp.leadId,
+        },
+      });
+    });
   }
 
   /** Resolve a real user for Message.senderUserId / audit (FK-safe). */

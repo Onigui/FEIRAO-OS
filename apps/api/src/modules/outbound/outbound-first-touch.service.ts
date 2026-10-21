@@ -35,6 +35,8 @@ import {
   OUTBOUND_FIRST_TOUCH_PIPELINE,
 } from './outbound-first-touch.constants';
 import { buildFirstTouchBody } from './utils/first-touch-copy';
+import { OUTBOUND_BLOCK_REASONS } from './outbound.constants';
+import { ShowcaseConsentService } from '../showcase/showcase-consent.service';
 
 type Actor = { cid: string; sub: string };
 type ReqMeta = { ip?: string; userAgent?: string };
@@ -55,6 +57,7 @@ export class OutboundFirstTouchService {
     private readonly audit: AuditService,
     private readonly suppress: OutboundSuppressService,
     @Optional() private readonly prom?: PrometheusMetricsService,
+    @Optional() private readonly showcaseConsent?: ShowcaseConsentService,
   ) {}
 
   async getOrCreateSettings(actor: Actor) {
@@ -480,6 +483,10 @@ export class OutboundFirstTouchService {
     if (await this.suppress.isSuppressed(actor.cid, lead.phone)) {
       throw new Error('SUPPRESSED');
     }
+    // Vitrine e Feirões: lead da vitrine sem autorização de ofertas não recebe first-touch.
+    if (await this.showcaseConsent?.isBlockedForAutomation(actor.cid, lead.id)) {
+      throw new Error(OUTBOUND_BLOCK_REASONS.SHOWCASE_NO_MARKETING_CONSENT);
+    }
 
     const blocking = await this.prisma.followUp.findFirst({
       where: {
@@ -763,9 +770,16 @@ export class OutboundFirstTouchService {
       },
     });
 
+    const showcaseBlocked =
+      (await this.showcaseConsent?.blockedLeadIds(
+        companyId,
+        candidates.map((c) => c.id),
+      )) ?? new Set<string>();
+
     const result: typeof candidates = [];
     for (const lead of candidates) {
       if (result.length >= limit) break;
+      if (showcaseBlocked.has(lead.id)) continue;
       const hasFu = await this.prisma.followUp.findFirst({
         where: {
           companyId,
@@ -803,8 +817,14 @@ export class OutboundFirstTouchService {
       select: { id: true, phone: true },
       take: 500,
     });
+    const showcaseBlocked =
+      (await this.showcaseConsent?.blockedLeadIds(
+        companyId,
+        leads.map((l) => l.id),
+      )) ?? new Set<string>();
     let n = 0;
     for (const lead of leads) {
+      if (showcaseBlocked.has(lead.id)) continue;
       const hasFu = await this.prisma.followUp.findFirst({
         where: {
           companyId,

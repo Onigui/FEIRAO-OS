@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listLeads } from "@/features/leads/api";
 import { CreateLeadDialog } from "@/features/leads/create-lead-dialog";
 import { LeadStatusBadge } from "@/features/leads/lead-status-badge";
+import { LeadOrigin, useLeadInterests } from "@/features/showcase/lead-interests";
 import { LEAD_STATUSES, LEAD_STATUS_LABEL } from "@/features/leads/constants";
 import type { LeadStatus } from "@/lib/api/types";
 import { breadcrumbsForPath } from "@/lib/nav";
@@ -51,6 +52,10 @@ export default function LeadsPage() {
         status: status === "ALL" ? undefined : status,
       }),
   });
+
+  const leadIds = useMemo(() => (query.data?.data ?? []).map((l) => l.id), [query.data]);
+  const interests = useLeadInterests(leadIds);
+  const interestOf = (id: string) => interests.data?.[id]?.[0];
 
   return (
     <div className="space-y-6">
@@ -138,7 +143,8 @@ export default function LeadsPage() {
                       {formatPhone(lead.phone)}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {lead.source || "—"} · {formatDateTime(lead.updatedAt)}
+                      <LeadOrigin source={lead.source} interest={interestOf(lead.id)} /> ·{" "}
+                      {formatDateTime(lead.updatedAt)}
                     </p>
                   </Link>
                 ))}
@@ -172,7 +178,9 @@ export default function LeadsPage() {
                         <td className="px-4 py-3">
                           <LeadStatusBadge status={lead.status} />
                         </td>
-                        <td className="px-4 py-3">{lead.source || "—"}</td>
+                        <td className="px-4 py-3">
+                          <LeadOrigin source={lead.source} interest={interestOf(lead.id)} />
+                        </td>
                         <td className="px-4 py-3">
                           {formatDateTime(lead.updatedAt)}
                         </td>
