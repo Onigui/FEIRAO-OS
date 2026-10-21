@@ -51,6 +51,7 @@ jobs:
       REDIS_HOST: localhost
       REDIS_PORT: '6379'
       SWAGGER_ENABLED: 'false'
+      THROTTLE_LIMIT: '100000'
       SEED_PROFILE: test
       PORT: '3001'
       R2_ENDPOINT: http://localhost:9000

@@ -6,8 +6,8 @@ export const OWNER_PASSWORD = process.env.E2E_PASSWORD ?? "Demo@12345";
 
 export async function login(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("E-mail").fill(OWNER_EMAIL);
-  await page.getByLabel("Senha").fill(OWNER_PASSWORD);
+  await page.getByLabel("E-mail", { exact: true }).fill(OWNER_EMAIL);
+  await page.getByLabel("Senha", { exact: true }).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: "Continuar" }).click();
   await page.waitForURL("**/dashboard");
 }

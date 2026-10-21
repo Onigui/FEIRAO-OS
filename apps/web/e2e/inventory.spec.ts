@@ -10,12 +10,12 @@ test.describe("Estoque — celular", () => {
     const model = `Gol E2E ${Date.now().toString().slice(-6)}`;
 
     await page.goto("/inventory/new");
-    await page.getByLabel("Marca").fill("Volkswagen");
-    await page.getByLabel("Modelo").fill(model);
-    await page.getByLabel("Ano de fabricação").fill("2020");
-    await page.getByLabel("Ano do modelo").fill("2021");
-    await page.getByLabel("Preço (R$)").fill("59.900");
-    await page.getByLabel("Quilometragem").fill("45.000");
+    await page.getByLabel("Marca", { exact: true }).fill("Volkswagen");
+    await page.getByLabel("Modelo", { exact: true }).fill(model);
+    await page.getByLabel("Ano de fabricação", { exact: true }).fill("2020");
+    await page.getByLabel("Ano do modelo", { exact: true }).fill("2021");
+    await page.getByLabel("Preço (R$)", { exact: true }).fill("59.900");
+    await page.getByLabel("Quilometragem", { exact: true }).fill("45.000");
     await page.getByRole("button", { name: "Salvar e adicionar fotos" }).click();
 
     await page.waitForURL(/\/inventory\/[0-9a-f-]{36}$/);
@@ -47,7 +47,7 @@ test.describe("Estoque — celular", () => {
 
     // Na lista, o filtro "Vendido" mostra o carro.
     await page.goto("/inventory");
-    await page.getByLabel("Filtrar por status").click();
+    await page.getByLabel("Filtrar por status", { exact: true }).click();
     await page.getByRole("option", { name: "Vendido", exact: true }).click();
     await page.getByPlaceholder("Buscar marca, modelo ou versão").fill(model);
     await expect(page.getByTestId("vehicle-list").getByText(model)).toBeVisible();
@@ -56,12 +56,12 @@ test.describe("Estoque — celular", () => {
   test("marca vendido com 1 toque direto na lista", async ({ page }) => {
     const model = `Uno Lista ${Date.now().toString().slice(-6)}`;
     await page.goto("/inventory/new");
-    await page.getByLabel("Marca").fill("Fiat");
-    await page.getByLabel("Modelo").fill(model);
-    await page.getByLabel("Ano de fabricação").fill("2018");
-    await page.getByLabel("Ano do modelo").fill("2018");
-    await page.getByLabel("Preço (R$)").fill("32.000");
-    await page.getByLabel("Quilometragem").fill("80000");
+    await page.getByLabel("Marca", { exact: true }).fill("Fiat");
+    await page.getByLabel("Modelo", { exact: true }).fill(model);
+    await page.getByLabel("Ano de fabricação", { exact: true }).fill("2018");
+    await page.getByLabel("Ano do modelo", { exact: true }).fill("2018");
+    await page.getByLabel("Preço (R$)", { exact: true }).fill("32.000");
+    await page.getByLabel("Quilometragem", { exact: true }).fill("80000");
     await page.getByRole("button", { name: "Salvar e adicionar fotos" }).click();
     await page.waitForURL(/\/inventory\/[0-9a-f-]{36}$/);
 
@@ -73,7 +73,7 @@ test.describe("Estoque — celular", () => {
     await page.getByRole("button", { name: "Confirmar" }).click();
     await expectToast(page, "Status: Vendido");
     // Fica fora da lista "Disponível".
-    await page.getByLabel("Filtrar por status").click();
+    await page.getByLabel("Filtrar por status", { exact: true }).click();
     await page.getByRole("option", { name: "Disponível", exact: true }).click();
     await expect(page.getByTestId("vehicle-list").getByText(model)).toHaveCount(0);
   });
@@ -111,8 +111,8 @@ test.describe("Estoque — celular", () => {
   test("configura e ativa a vitrine da loja", async ({ page }) => {
     await page.goto("/settings/showcase");
     await expect(page.getByTestId("showcase-url")).toContainText("/vitrine/");
-    await page.getByLabel("WhatsApp da loja").fill("(14) 99999-0000");
-    await page.getByLabel("Cidade").fill("Botucatu");
+    await page.getByLabel("WhatsApp da loja", { exact: true }).fill("(14) 99999-0000");
+    await page.getByLabel("Cidade", { exact: true }).fill("Botucatu");
     const terms = page.getByRole("checkbox");
     if (await terms.isEnabled()) await terms.check();
 
@@ -123,6 +123,6 @@ test.describe("Estoque — celular", () => {
     }
     await page.getByRole("button", { name: "Salvar e ativar vitrine" }).click();
     await expectToast(page, "Vitrine ativada");
-    await expect(page.getByText("Vitrine ativa")).toBeVisible();
+    await expect(page.getByText("Vitrine ativa", { exact: true })).toBeVisible();
   });
 });
