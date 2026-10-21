@@ -92,7 +92,21 @@ export default function VehicleDetailPage() {
         title={`${v.make} ${v.model}`}
         description={`${v.version ? `${v.version} · ` : ""}${formatPriceCents(v.priceCents)} · código ${v.showcaseCode}`}
         breadcrumbs={breadcrumbsForPath(`/inventory/${v.id}`)}
-        actions={<VehicleStatusBadge status={v.status} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <VehicleStatusBadge status={v.status} />
+            {v.status !== "ARCHIVED" ? (
+              <a
+                href={`/carro/${v.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-primary underline"
+              >
+                Ver na vitrine
+              </a>
+            ) : null}
+          </div>
+        }
       />
 
       <Card className="bg-white/90">

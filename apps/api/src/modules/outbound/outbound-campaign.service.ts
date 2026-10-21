@@ -34,6 +34,7 @@ import {
   OUTBOUND_CAMPAIGN_PIPELINE,
   type CampaignStatus,
 } from './outbound-campaign.constants';
+import { ShowcaseConsentService } from '../showcase/showcase-consent.service';
 
 type Actor = { cid: string; sub: string };
 type ReqMeta = { ip?: string; userAgent?: string };
@@ -52,6 +53,7 @@ export class OutboundCampaignService {
     private readonly audit: AuditService,
     private readonly firstTouch: OutboundFirstTouchService,
     @Optional() private readonly prom?: PrometheusMetricsService,
+    @Optional() private readonly showcaseConsent?: ShowcaseConsentService,
   ) {}
 
   async create(actor: Actor, dto: CreateCampaignDto, meta?: ReqMeta) {
@@ -323,10 +325,22 @@ export class OutboundCampaignService {
       throw new BadRequestException('One or more leads not found in company');
     }
 
+    // Vitrine e Feirões: lead da vitrine sem autorização de ofertas não entra em campanha.
+    const showcaseBlocked =
+      (await this.showcaseConsent?.blockedLeadIds(
+        actor.cid,
+        leads.map((l) => l.id),
+      )) ?? new Set<string>();
+
     let added = 0;
     let skipped = 0;
+    const skippedNoConsent = showcaseBlocked.size;
     await this.prisma.$transaction(async (tx) => {
       for (const lead of leads) {
+        if (showcaseBlocked.has(lead.id)) {
+          skipped += 1;
+          continue;
+        }
         const existing = await tx.outboundCampaignLead.findFirst({
           where: {
             companyId: actor.cid,
@@ -371,7 +385,12 @@ export class OutboundCampaignService {
         targetType: 'OUTBOUND_CAMPAIGN',
         targetId: id,
         before: null,
-        after: { added, skipped, pipeline: OUTBOUND_CAMPAIGN_PIPELINE },
+        after: {
+          added,
+          skipped,
+          skippedNoConsent,
+          pipeline: OUTBOUND_CAMPAIGN_PIPELINE,
+        },
         ip: meta?.ip,
         userAgent: meta?.userAgent,
       });
@@ -383,6 +402,8 @@ export class OutboundCampaignService {
       campaignId: id,
       added,
       skipped,
+      /** Leads da vitrine sem autorização de ofertas (já contados em skipped). */
+      skippedNoConsent,
       leadCount: metrics.totalLeads,
       metrics,
     };

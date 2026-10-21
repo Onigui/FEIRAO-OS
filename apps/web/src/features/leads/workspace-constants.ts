@@ -26,6 +26,7 @@ export function timelineTypeLabel(itemType: TimelineItemType): string {
   if (itemType === "ACTIVITY") return "Atividade";
   if (itemType === "AUDIT_LEAD_STATUS_CHANGE") return "Mudança de status";
   if (itemType === "AUDIT_LEAD_ASSIGN") return "Responsável";
+  if (itemType === "AUDIT_SHOWCASE_INTEREST_CREATED") return "Vitrine";
   if (itemType.startsWith("AUDIT_")) return "Registro";
   return "Evento";
 }

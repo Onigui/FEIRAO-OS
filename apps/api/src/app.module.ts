@@ -16,6 +16,8 @@ import { EventsModule } from './modules/events/events.module';
 import { ExportsModule } from './modules/exports/exports.module';
 import { FollowUpModule } from './modules/follow-up/follow-up.module';
 import { HealthModule } from './modules/health/health.module';
+import { ShowcaseConsentModule } from './modules/showcase/showcase-consent.module';
+import { ShowcaseModule } from './modules/showcase/showcase.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
@@ -54,6 +56,8 @@ const workersInApi = (process.env.ASYNC_WORKERS_IN_API ?? 'true') === 'true';
     ...(workersInApi ? [WorkerModule] : []),
     HealthModule,
     InventoryModule,
+    ShowcaseConsentModule,
+    ShowcaseModule,
     AuthModule,
     CompaniesModule,
     UsersModule,

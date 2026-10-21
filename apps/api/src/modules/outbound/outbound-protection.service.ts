@@ -17,6 +17,7 @@ import {
 } from './outbound.constants';
 import { OutboundProtectionSettingsService } from './outbound-protection-settings.service';
 import { OutboundSuppressService } from './outbound-suppress.service';
+import { ShowcaseConsentService } from '../showcase/showcase-consent.service';
 
 export type ProactiveGuardInput = {
   companyId: string;
@@ -45,6 +46,7 @@ export class OutboundProtectionService {
     private readonly settings: OutboundProtectionSettingsService,
     private readonly suppress: OutboundSuppressService,
     @Optional() private readonly prom?: PrometheusMetricsService,
+    @Optional() private readonly showcaseConsent?: ShowcaseConsentService,
   ) {}
 
   /**
@@ -96,6 +98,21 @@ export class OutboundProtectionService {
       return this.block(
         input,
         OUTBOUND_BLOCK_REASONS.SUPPRESSED,
+        policy.dailyProactiveCap,
+        0,
+      );
+    }
+
+    // Vitrine e Feirões: sem autorização de ofertas, nenhuma mensagem proativa.
+    if (
+      await this.showcaseConsent?.isBlockedForAutomation(
+        input.companyId,
+        lead.id,
+      )
+    ) {
+      return this.block(
+        input,
+        OUTBOUND_BLOCK_REASONS.SHOWCASE_NO_MARKETING_CONSENT,
         policy.dailyProactiveCap,
         0,
       );

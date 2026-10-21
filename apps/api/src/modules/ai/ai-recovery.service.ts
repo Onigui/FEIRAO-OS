@@ -27,6 +27,7 @@ import {
 import { OutboundProtectionService } from '../outbound/outbound-protection.service';
 import { AiRecoveryMessageService } from './ai-recovery-message.service';
 import { AiRecoverySettingsService } from './ai-recovery-settings.service';
+import { ShowcaseConsentService } from '../showcase/showcase-consent.service';
 
 export type RecoveryStopReason =
   | 'REPLY'
@@ -37,7 +38,8 @@ export type RecoveryStopReason =
   | 'DISABLED'
   | 'AGENT_MODE_OFF'
   | 'MANUAL'
-  | 'OUTBOUND_PROTECTED';
+  | 'OUTBOUND_PROTECTED'
+  | 'NO_MARKETING_CONSENT';
 
 type RecoveryMeta = {
   source: typeof AI_RECOVERY_MESSAGE_SOURCE;
@@ -63,6 +65,7 @@ export class AiRecoveryService {
     @Optional() private readonly prom?: PrometheusMetricsService,
     @Optional()
     private readonly outboundProtection?: OutboundProtectionService,
+    @Optional() private readonly showcaseConsent?: ShowcaseConsentService,
   ) {}
 
   /**
@@ -143,6 +146,10 @@ export class AiRecoveryService {
   ): Promise<boolean> {
     if (!this.isEligibleStatus(lead.status)) return false;
     if (!lead.lastOutboundAt) return false;
+    // Vitrine e Feirões: lead da vitrine sem autorização de ofertas não entra na recuperação.
+    if (await this.showcaseConsent?.isBlockedForAutomation(companyId, lead.id)) {
+      return false;
+    }
 
     const pending = await this.prisma.followUp.findFirst({
       where: {
@@ -357,6 +364,19 @@ export class AiRecoveryService {
       await this.stopLeadRecovery(input.companyId, lead.id, 'MANUAL');
       return { ok: false, reason: 'MANUAL' };
     }
+    if (
+      await this.showcaseConsent?.isBlockedForAutomation(
+        input.companyId,
+        lead.id,
+      )
+    ) {
+      await this.stopLeadRecovery(
+        input.companyId,
+        lead.id,
+        'NO_MARKETING_CONSENT',
+      );
+      return { ok: false, reason: 'NO_MARKETING_CONSENT' };
+    }
 
     if (this.outboundProtection) {
       const gate = await this.outboundProtection.canSendProactive({
@@ -366,6 +386,14 @@ export class AiRecoveryService {
         auditOnBlock: false,
       });
       if (!gate.allowed) {
+        if (gate.reason === 'SHOWCASE_NO_MARKETING_CONSENT') {
+          await this.stopLeadRecovery(
+            input.companyId,
+            lead.id,
+            'NO_MARKETING_CONSENT',
+          );
+          return { ok: false, reason: 'NO_MARKETING_CONSENT' };
+        }
         const permanent =
           gate.reason === 'SUPPRESSED' ||
           gate.reason === 'LEAD_LOST' ||

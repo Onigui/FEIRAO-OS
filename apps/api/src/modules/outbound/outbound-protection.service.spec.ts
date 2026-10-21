@@ -68,6 +68,50 @@ describe('OutboundProtectionService (V1.1)', () => {
     auditOnBlock: false,
   };
 
+  describe('Vitrine e Feirões — lead da vitrine sem autorização de ofertas', () => {
+    const consent = { isBlockedForAutomation: jest.fn() };
+    const withConsent = () =>
+      new OutboundProtectionService(
+        prisma as never,
+        audit as never,
+        settings as never,
+        suppress as never,
+        prom as never,
+        consent as never,
+      );
+
+    it('bloqueia envio proativo', async () => {
+      consent.isBlockedForAutomation.mockResolvedValue(true);
+      await expect(withConsent().canSendProactive(base)).resolves.toEqual(
+        expect.objectContaining({
+          allowed: false,
+          reason: 'SHOWCASE_NO_MARKETING_CONSENT',
+        }),
+      );
+      expect(consent.isBlockedForAutomation).toHaveBeenCalledWith('c1', 'lead-1');
+    });
+
+    it('bloqueia mesmo com a proteção de limites desligada', async () => {
+      settings.getOrCreate.mockResolvedValue({ ...policy, enabled: false });
+      consent.isBlockedForAutomation.mockResolvedValue(true);
+      const res = await withConsent().canSendProactive(base);
+      expect(res.allowed).toBe(false);
+    });
+
+    it('libera quando a loja tem autorização de ofertas', async () => {
+      consent.isBlockedForAutomation.mockResolvedValue(false);
+      const res = await withConsent().canSendProactive(base);
+      expect(res.allowed).toBe(true);
+    });
+
+    it('não consulta a vitrine para resposta que não é proativa (ex.: IA respondendo)', async () => {
+      consent.isBlockedForAutomation.mockResolvedValue(true);
+      const res = await withConsent().canSendProactive({ ...base, source: 'ai_agent' });
+      expect(res.allowed).toBe(true);
+      expect(consent.isBlockedForAutomation).not.toHaveBeenCalled();
+    });
+  });
+
   it('skips gate for non-proactive sources', async () => {
     await expect(
       service.canSendProactive({ ...base, source: 'whatsapp_send' }),
