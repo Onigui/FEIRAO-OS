@@ -13,7 +13,7 @@
 | Módulo `inventory` (registrado no `AppModule`) | `src/modules/inventory/**` |
 | `StorageService.headObject` (confirma que a foto chegou ao R2) | `src/modules/storage/storage.service.ts` |
 | Testes e2e: 26 cenários de RLS e fluxos da API | `test/vitrine-feiroes-rls.e2e-spec.ts`, `test/vitrine-feiroes-inventory.e2e-spec.ts` |
-| CI: roda em `claude/**` e relata drift do Prisma (informativo) | `.github/workflows/api-ci.yml`, `web-ci.yml` |
+| CI: roda em `claude/**` e falha se houver drift do Prisma nas tabelas novas (`scripts/check-vitrine-drift.sh`) | `.github/workflows/api-ci.yml`, `web-ci.yml` |
 
 ## API nova
 
@@ -55,11 +55,19 @@ Telas (etapa 2), rotas públicas e contatos (etapa 3), feirões (etapa 4). As ta
 | Lint dos arquivos novos e alterados | ambiente de desenvolvimento | sem erros |
 | Tipos (`tsconfig.build.json`) | ambiente de desenvolvimento | OK |
 | As 22 migrations aplicadas em ordem num PostgreSQL 16 | ambiente de desenvolvimento | OK; 21 políticas criadas |
-| e2e (RLS + estoque) e build | GitHub Actions | ver seção "Resultado do CI" |
+| e2e (RLS + estoque), drift e build | GitHub Actions | OK (ver "Resultado do CI") |
 
 ## Resultado do CI
 
-_(preenchido após a execução)_
+GitHub Actions, branch `claude/vitrine-feiroes-etapa-1`:
+
+| Passo | Resultado |
+| --- | --- |
+| Lint, testes unitários, `prisma migrate deploy` (22 migrations) e seed | OK |
+| **Prisma drift (Vitrine e Feirões)**: banco migrado comparado ao `schema.prisma` | Nenhuma diferença nas tabelas novas; a migration escrita à mão bate com o schema. Há 3 linhas de diff em objetos antigos do AutoPilot (anteriores a esta etapa). |
+| E2E, incluindo os 26 cenários de RLS com papel sem `BYPASSRLS` e os 13 testes da API de estoque | OK |
+| Build | OK |
+| Web CI | OK (sem mudanças na web) |
 
 ## Como testar manualmente
 
