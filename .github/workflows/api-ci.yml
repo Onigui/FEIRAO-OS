@@ -83,19 +83,10 @@ jobs:
       - name: Seed test fixtures
         run: npm run seed:test
 
-      # Vitrine e Feirões: migrations são escritas à mão (padrão do repo). Este passo mostra,
-      # como aviso, o que o Prisma ainda gostaria de mudar no banco migrado. Não falha o build:
-      # o repo já tem objetos fora do Prisma (ex.: índice parcial uq_companies_slug_active, RLS).
-      - name: Prisma drift report (informativo)
-        continue-on-error: true
-        run: |
-          npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script > /tmp/drift.sql || true
-          if grep -qv '^--\|^$' /tmp/drift.sql; then
-            msg=$(grep -v '^$' /tmp/drift.sql | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
-            echo "::warning title=Prisma drift::${msg}"
-          else
-            echo "::notice title=Prisma drift::sem diferenças"
-          fi
+      # Vitrine e Feirões: migrations são escritas à mão (padrão do repo).
+      # Falha se o Prisma ainda quiser mudar objetos da Vitrine/Feirões no banco migrado.
+      - name: Prisma drift (Vitrine e Feirões)
+        run: bash scripts/check-vitrine-drift.sh
 
       - name: E2E tests
         # Serial: suites share seeded users; auth logout-all would race parallel workers.
