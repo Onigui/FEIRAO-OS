@@ -135,7 +135,7 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
     const available = await createVehicle('Disponivel');
     const archived = await createVehicle('Arquivado');
     await auth(api().post(`/api/inventory/vehicles/${archived.id}/status`))
-      .send({ status: 'ARCHIVED' })
+      .send({ toStatus: 'ARCHIVED' })
       .expect(200);
 
     const res = await api()
@@ -312,7 +312,7 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
   it('vendido sai da vitrine na hora e não aceita contato', async () => {
     const v = await createVehicle('Vendido');
     await auth(api().post(`/api/inventory/vehicles/${v.id}/status`))
-      .send({ status: 'SOLD' })
+      .send({ toStatus: 'SOLD' })
       .expect(200);
     const list = await api()
       .get('/api/public/vehicles')
