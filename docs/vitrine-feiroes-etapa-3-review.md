@@ -67,9 +67,12 @@ A regra: o lead tem algum interesse da vitrine e nenhum deles autorizou ofertas.
 | --- | --- | --- |
 | Testes unitários da API | ambiente de desenvolvimento | 79 suítes, 498 testes passando (antes: 477) |
 | Tipos, lint e build da web | ambiente de desenvolvimento | OK |
-| e2e da API: vitrine, formulário, Lead, 24 h, campo-armadilha, vendido, bloqueio, analytics, painel | GitHub Actions | ver "Resultado do CI" |
-| e2e no celular: visitante acha o carro, pede contato, loja vê o lead, vendido sai da vitrine | GitHub Actions | ver "Resultado do CI" |
+| e2e da API: vitrine, formulário, Lead, 24 h, campo-armadilha, vendido, bloqueio, analytics, painel, limite 429 | GitHub Actions | OK (10 cenários) |
+| e2e no celular: visitante acha o carro, pede contato, loja vê o lead, vendido sai da vitrine | GitHub Actions | OK (5 de 5, contando os 4 da etapa 2) |
+| Web CI (tipos, lint, build) | GitHub Actions | OK |
+| Drift do Prisma nas tabelas novas | GitHub Actions | nenhuma diferença |
 
-## Resultado do CI
+## Ajustes feitos com o CI
 
-(preenchido após a execução)
+- Os limites das rotas públicas agora podem ser ajustados por variável de ambiente (`SHOWCASE_*_LIMIT_PER_MIN`, padrões 300/10/120). O teste da API confirmou que o limite de 10 contatos por minuto funciona (429).
+- Falhas do e2e da API agora aparecem como anotações no GitHub (reporter `github-actions` do Jest).
