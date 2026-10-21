@@ -259,6 +259,19 @@ export default () => {
       ),
     },
     apiPublicUrl: process.env.API_PUBLIC_URL ?? 'http://localhost:3001',
+    storage: {
+      r2: {
+        accountId: process.env.R2_ACCOUNT_ID || undefined,
+        accessKeyId: process.env.R2_ACCESS_KEY_ID || undefined,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || undefined,
+        bucket: process.env.R2_BUCKET || undefined,
+        publicBaseUrl: process.env.R2_PUBLIC_BASE_URL || undefined,
+        uploadUrlTtlSeconds: parseInt(
+          process.env.R2_UPLOAD_URL_TTL_SECONDS ?? '300',
+          10,
+        ),
+      },
+    },
     jwt: {
       accessSecret: process.env.JWT_ACCESS_SECRET,
       accessTtl: process.env.JWT_ACCESS_TTL ?? '15m',

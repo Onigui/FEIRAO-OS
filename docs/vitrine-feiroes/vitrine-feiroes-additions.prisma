@@ -1,0 +1,250 @@
+// vitrine-feiroes-additions.prisma — AutoPilot (apps/api/prisma/schema.prisma)
+// Validado em 21/10/2026 contra o schema do commit 8bebbb0 com o validador do Prisma 6.19.
+//
+// 1) No model Company, ACRESCENTAR estes campos (depois de deletedAt):
+//   publicWhatsapp          String?   @map("public_whatsapp") @db.VarChar(32)
+//   publicAddress           String?   @map("public_address") @db.VarChar(300)
+//   city                    String?   @db.VarChar(120)
+//   showcaseEnabled         Boolean   @default(false) @map("showcase_enabled")
+//   showcaseTermsAcceptedAt DateTime? @map("showcase_terms_accepted_at") @db.Timestamptz(6)
+//
+// 2) No model Company, ACRESCENTAR estas relações (junto das listas existentes):
+//   vehicles                   Vehicle[]
+//   vehiclePhotos              VehiclePhoto[]
+//   vehicleStatusTransitions   VehicleStatusTransition[]
+//   organizedFairs             Fair[]                    @relation("FairOrganizer")
+//   fairParticipations         FairParticipant[]
+//   fairVehicles               FairVehicle[]
+//   leadVehicleInterests       LeadVehicleInterest[]
+//
+// 3) No model Lead, ACRESCENTAR a relação:
+//   vehicleInterests        LeadVehicleInterest[]
+//
+// 4) ACRESCENTAR ao final do arquivo os enums e models abaixo.
+
+// ===== Vitrine e Feirões (Fase 1) =====
+
+enum VehicleStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  ARCHIVED
+}
+
+enum VehicleTransmission {
+  MANUAL
+  AUTOMATIC
+  CVT
+  AUTOMATED
+}
+
+enum VehicleFuel {
+  FLEX
+  GASOLINE
+  ETHANOL
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+enum FairStatus {
+  DRAFT
+  PUBLISHED
+  LIVE
+  ENDED
+}
+
+enum FairParticipantStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+}
+
+enum VehicleInterestIntent {
+  INTEREST
+  PRICE_ALERT
+  VISIT_AT_FAIR
+}
+
+enum ShowcaseAnalyticsType {
+  PAGE_VIEW
+  QR_SCAN
+  WHATSAPP_CLICK
+  SEARCH
+}
+
+model Vehicle {
+  id              String              @id @default(uuid()) @db.Uuid
+  companyId       String              @map("company_id") @db.Uuid
+  slug            String              @unique @db.VarChar(160)
+  showcaseCode    String              @unique @map("showcase_code") @db.VarChar(16)
+  make            String              @db.VarChar(60)
+  model           String              @db.VarChar(80)
+  version         String?             @db.VarChar(120)
+  yearManufacture Int                 @map("year_manufacture")
+  yearModel       Int                 @map("year_model")
+  priceCents      Int                 @map("price_cents")
+  mileageKm       Int                 @map("mileage_km")
+  transmission    VehicleTransmission
+  fuel            VehicleFuel
+  bodyType        String?             @map("body_type") @db.VarChar(40)
+  color           String?             @db.VarChar(40)
+  description     String?             @db.Text
+  status          VehicleStatus       @default(AVAILABLE)
+  soldAt          DateTime?           @map("sold_at") @db.Timestamptz(6)
+  createdById     String?             @map("created_by_id") @db.Uuid
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?           @map("deleted_at") @db.Timestamptz(6)
+
+  company           Company                   @relation(fields: [companyId], references: [id])
+  photos            VehiclePhoto[]
+  statusTransitions VehicleStatusTransition[]
+  fairVehicles      FairVehicle[]
+  interests         LeadVehicleInterest[]
+
+  @@index([companyId, status])
+  @@index([companyId, createdAt])
+  @@index([status, priceCents])
+  @@map("vehicles")
+}
+
+model VehiclePhoto {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  vehicleId  String   @map("vehicle_id") @db.Uuid
+  storageKey String   @map("storage_key") @db.VarChar(300)
+  width      Int
+  height     Int
+  sortOrder  Int      @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, sortOrder])
+  @@index([companyId])
+  @@map("vehicle_photos")
+}
+
+model VehicleStatusTransition {
+  id          String        @id @default(uuid()) @db.Uuid
+  companyId   String        @map("company_id") @db.Uuid
+  vehicleId   String        @map("vehicle_id") @db.Uuid
+  fromStatus  VehicleStatus @map("from_status")
+  toStatus    VehicleStatus @map("to_status")
+  actorUserId String?       @map("actor_user_id") @db.Uuid
+  occurredAt  DateTime      @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@index([vehicleId, occurredAt])
+  @@index([companyId, occurredAt])
+  @@map("vehicle_status_transitions")
+}
+
+model Fair {
+  id          String     @id @default(uuid()) @db.Uuid
+  companyId   String     @map("company_id") @db.Uuid // loja organizadora
+  name        String     @db.VarChar(160)
+  slug        String     @unique @db.VarChar(160)
+  startsAt    DateTime   @map("starts_at") @db.Timestamptz(6)
+  endsAt      DateTime   @map("ends_at") @db.Timestamptz(6)
+  venue       String     @db.VarChar(200)
+  address     String?    @db.VarChar(300)
+  description String?    @db.Text
+  coverKey    String?    @map("cover_key") @db.VarChar(300)
+  status      FairStatus @default(DRAFT)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  organizer    Company               @relation("FairOrganizer", fields: [companyId], references: [id])
+  participants FairParticipant[]
+  vehicles     FairVehicle[]
+  interests    LeadVehicleInterest[]
+
+  @@index([companyId, startsAt])
+  @@index([status, startsAt])
+  @@map("fairs")
+}
+
+model FairParticipant {
+  id          String                @id @default(uuid()) @db.Uuid
+  fairId      String                @map("fair_id") @db.Uuid
+  companyId   String                @map("company_id") @db.Uuid // loja convidada
+  organizerCompanyId String         @map("organizer_company_id") @db.Uuid // cópia de fairs.company_id (para RLS)
+  status      FairParticipantStatus @default(INVITED)
+  invitedAt   DateTime              @default(now()) @map("invited_at") @db.Timestamptz(6)
+  respondedAt DateTime?             @map("responded_at") @db.Timestamptz(6)
+
+  fair    Fair    @relation(fields: [fairId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([fairId, companyId])
+  @@index([companyId])
+  @@index([organizerCompanyId])
+  @@map("fair_participants")
+}
+
+model FairVehicle {
+  id                String   @id @default(uuid()) @db.Uuid
+  fairId            String   @map("fair_id") @db.Uuid
+  vehicleId         String   @map("vehicle_id") @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid // loja dona do carro
+  organizerCompanyId String  @map("organizer_company_id") @db.Uuid // cópia de fairs.company_id (para RLS)
+  priceCentsAtFair  Int      @map("price_cents_at_fair")
+  qrCode            String   @unique @map("qr_code") @db.VarChar(16)
+  addedAt           DateTime @default(now()) @map("added_at") @db.Timestamptz(6)
+
+  fair    Fair    @relation(fields: [fairId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([fairId, vehicleId])
+  @@index([companyId])
+  @@index([organizerCompanyId])
+  @@map("fair_vehicles")
+}
+
+model LeadVehicleInterest {
+  id                 String                @id @default(uuid()) @db.Uuid
+  companyId          String                @map("company_id") @db.Uuid
+  leadId             String                @map("lead_id") @db.Uuid
+  vehicleId          String?               @map("vehicle_id") @db.Uuid
+  fairId             String?               @map("fair_id") @db.Uuid
+  fairOrganizerCompanyId String?         @map("fair_organizer_company_id") @db.Uuid // cópia (para contagem do organizador)
+  intent             VehicleInterestIntent
+  source             String                @db.VarChar(32) // SHOWCASE_CITY | SHOWCASE_STORE | VEHICLE_PAGE | FAIR_PAGE | QR
+  consentContactAt   DateTime              @map("consent_contact_at") @db.Timestamptz(6)
+  consentMarketingAt DateTime?             @map("consent_marketing_at") @db.Timestamptz(6)
+  consentTextVersion String                @map("consent_text_version") @db.VarChar(32)
+  anonymizedAt       DateTime?             @map("anonymized_at") @db.Timestamptz(6)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  company Company  @relation(fields: [companyId], references: [id])
+  lead    Lead     @relation(fields: [leadId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  fair    Fair?    @relation(fields: [fairId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([leadId])
+  @@index([companyId, leadId, vehicleId])
+  @@index([fairOrganizerCompanyId, fairId])
+  @@map("lead_vehicle_interests")
+}
+
+model ShowcaseAnalyticsEvent {
+  id          String                @id @default(uuid()) @db.Uuid
+  type        ShowcaseAnalyticsType
+  companyId   String?               @map("company_id") @db.Uuid
+  vehicleId   String?               @map("vehicle_id") @db.Uuid
+  fairId      String?               @map("fair_id") @db.Uuid
+  sessionHash String                @map("session_hash") @db.VarChar(64)
+  occurredAt  DateTime              @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@index([fairId, type, occurredAt])
+  @@index([companyId, type, occurredAt])
+  @@map("showcase_analytics_events")
+}
