@@ -121,4 +121,4 @@ export const LEAD_STATUSES = [
   'LOST',
 ] as const;
 
-export type SeedProfile = 'local' | 'demo' | 'test' | 'pilot';
+export type SeedProfile = 'local' | 'demo' | 'test' | 'pilot' | 'vitrine';

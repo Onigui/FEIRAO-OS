@@ -102,8 +102,20 @@ jobs:
           npm run seed:test
           npm run build
 
+      # Como em produção: a API usa o papel sem BYPASSRLS; o RLS vale de verdade nos testes.
+      - name: Banco — papel da aplicação (sem BYPASSRLS)
+        working-directory: apps/api
+        run: |
+          psql "postgresql://autopilot:autopilot@localhost:5432/autopilot" -v ON_ERROR_STOP=1 \
+            -v app_password="'app-e2e-password'" -f scripts/create-app-role.sql
+          psql "postgresql://autopilot:autopilot@localhost:5432/autopilot" -v ON_ERROR_STOP=1 \
+            -v app_password="'app-e2e-password'" -f scripts/create-app-role.sql
+
       - name: API — start
         working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://autopilot_app:app-e2e-password@localhost:5432/autopilot?schema=public
+          TRUST_PROXY_HOPS: '1'
         run: |
           nohup node dist/main > /tmp/api.log 2>&1 &
           for i in $(seq 1 60); do

@@ -8,6 +8,8 @@ import { ShowcaseAnalyticsService } from './showcase-analytics.service';
 import { ShowcaseInterestService } from './showcase-interest.service';
 import { ShowcasePanelController } from './showcase-panel.controller';
 import { ShowcasePanelService } from './showcase-panel.service';
+import { ShowcaseRetentionScanner } from './showcase-retention.scanner';
+import { ShowcaseRetentionService } from './showcase-retention.service';
 
 /** Vitrine e Feirões — vitrine pública, contatos → Lead e números da vitrine. */
 @Module({
@@ -18,6 +20,9 @@ import { ShowcasePanelService } from './showcase-panel.service';
     ShowcaseInterestService,
     ShowcaseAnalyticsService,
     ShowcasePanelService,
+    ShowcaseRetentionService,
+    ShowcaseRetentionScanner,
   ],
+  exports: [ShowcaseRetentionService],
 })
 export class ShowcaseModule {}

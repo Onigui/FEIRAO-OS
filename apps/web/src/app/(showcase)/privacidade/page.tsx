@@ -43,8 +43,10 @@ export default function PrivacyPage() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Por quanto tempo</h2>
         <p>
-          Um pedido de contato sem andamento por 12 meses é anonimizado: o vínculo com seu nome e
-          telefone é removido.
+          Um pedido de contato sem andamento por 12 meses é anonimizado automaticamente. Se a
+          vitrine foi o único contato entre você e a loja, seu nome e telefone são apagados. Se
+          você também conversa com a loja por outro canal, como o WhatsApp, esse histórico fica
+          com a loja.
         </p>
       </section>
 

@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { OutboundProtectionService } from '../src/modules/outbound/outbound-protection.service';
+import { ShowcaseRetentionService } from '../src/modules/showcase/showcase-retention.service';
 import { authAs } from './helpers/auth';
 import { createE2eApp, E2E_COMPANY_SLUG } from './helpers/e2e-app';
 
@@ -454,5 +455,50 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
     } finally {
       process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1000';
     }
+  });
+
+  it('LGPD: contato sem andamento há mais de 12 meses é anonimizado', async () => {
+    const v = await createVehicle('Retencao');
+    const old = randomCell();
+    const kept = randomCell();
+    leadPhones.push(old.stored, kept.stored);
+    await interest({ vehicleSlug: v.slug, phone: old.masked }).expect(201);
+    await interest({ vehicleSlug: v.slug, phone: kept.masked }).expect(201);
+    const oldLead = await db.lead.findFirstOrThrow({
+      where: { phone: old.stored },
+    });
+    const keptLead = await db.lead.findFirstOrThrow({
+      where: { phone: kept.stored },
+    });
+
+    // Envelhece os dois em 13 meses; o segundo "respondeu" (teve andamento).
+    const past = new Date(Date.now() - 395 * 24 * 60 * 60 * 1000).toISOString();
+    await db.$executeRawUnsafe(
+      `UPDATE lead_vehicle_interests SET created_at = '${past}' WHERE lead_id IN ('${oldLead.id}','${keptLead.id}')`,
+    );
+    await db.$executeRawUnsafe(
+      `UPDATE leads SET created_at = '${past}', last_contact_at = '${past}' WHERE id IN ('${oldLead.id}','${keptLead.id}')`,
+    );
+    await db.$executeRawUnsafe(
+      `UPDATE leads SET status = 'RESPONDED' WHERE id = '${keptLead.id}'`,
+    );
+
+    const res = await app.get(ShowcaseRetentionService).run(new Date(), 12);
+    expect(res.leads).toBeGreaterThanOrEqual(1);
+
+    const gone = await db.lead.findUniqueOrThrow({ where: { id: oldLead.id } });
+    expect(gone.name).toBe('Contato anonimizado');
+    expect(gone.phone).toMatch(/^anon-/);
+    expect(gone.deletedAt).toBeInstanceOf(Date);
+    const oldInterest = await db.leadVehicleInterest.findFirstOrThrow({
+      where: { leadId: oldLead.id },
+    });
+    expect(oldInterest.anonymizedAt).toBeInstanceOf(Date);
+
+    const stays = await db.lead.findUniqueOrThrow({
+      where: { id: keptLead.id },
+    });
+    expect(stays.phone).toBe(kept.stored);
+    expect(stays.deletedAt).toBeNull();
   });
 });

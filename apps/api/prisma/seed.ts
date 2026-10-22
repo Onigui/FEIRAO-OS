@@ -5,6 +5,7 @@ import { seedLocal } from './seeds/local';
 import { seedDemo } from './seeds/demo';
 import { seedPilot } from './seeds/pilot';
 import { seedTest } from './seeds/test';
+import { seedVitrine } from './seeds/vitrine';
 
 function resolveProfile(): SeedProfile {
   const fromEnv = (process.env.SEED_PROFILE ?? '').toLowerCase();
@@ -15,9 +16,9 @@ function resolveProfile(): SeedProfile {
 
   const profile = (fromArg || fromEnv || 'local') as SeedProfile;
 
-  if (!['local', 'demo', 'test', 'pilot'].includes(profile)) {
+  if (!['local', 'demo', 'test', 'pilot', 'vitrine'].includes(profile)) {
     throw new Error(
-      `Invalid SEED_PROFILE "${profile}". Use: local | demo | test | pilot`,
+      `Invalid SEED_PROFILE "${profile}". Use: local | demo | test | pilot | vitrine`,
     );
   }
 
@@ -56,6 +57,9 @@ async function main() {
       break;
     case 'pilot':
       counts = await seedPilot();
+      break;
+    case 'vitrine':
+      counts = await seedVitrine();
       break;
   }
 
