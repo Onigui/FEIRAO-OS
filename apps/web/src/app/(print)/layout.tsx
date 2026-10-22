@@ -6,7 +6,7 @@ import { RequireAuth } from "@/components/auth/require-auth";
 export default function PrintLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth requireCompany>
-      <main className="mx-auto max-w-5xl bg-white p-4 print:max-w-none print:p-0">{children}</main>
+      <main data-print-page className="mx-auto max-w-5xl bg-white p-4 print:max-w-none print:p-0">{children}</main>
     </RequireAuth>
   );
 }

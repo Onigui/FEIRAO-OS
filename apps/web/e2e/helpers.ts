@@ -28,10 +28,13 @@ function trackApi(page: Page): string[] {
   return log;
 }
 
-/** Espera o fim da checagem de sessão: ou o menu logado aparece, ou volta para /login. */
+/** Espera o fim da checagem de sessão: menu logado (ou página de impressão logada) ou volta para /login. */
 async function waitAuthSettled(page: Page) {
   await page.waitForFunction(
-    () => location.pathname === "/login" || document.querySelector('a[href="/inventory"]') !== null,
+    () =>
+      location.pathname === "/login" ||
+      document.querySelector('a[href="/inventory"]') !== null ||
+      document.querySelector("[data-print-page]") !== null,
     undefined,
     { timeout: 20_000 },
   );
