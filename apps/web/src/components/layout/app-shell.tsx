@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Download,
   GitBranch,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -200,6 +201,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
         {roleLabel ? <Badge variant="secondary">{roleLabel}</Badge> : null}
       </div>
+      <Button asChild variant="ghost" size="sm" className="w-full">
+        <Link href="/conta" data-testid="nav-my-account">
+          <KeyRound className="h-4 w-4" />
+          Minha senha
+        </Link>
+      </Button>
       <Button
         variant="outline"
         size="sm"

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
+  createAccessLink,
   createMembership,
   listMemberships,
   revokeMembership,
@@ -15,7 +16,12 @@ import {
 import { RequireRole } from "@/components/auth/require-role";
 import { useAuth } from "@/providers/auth-provider";
 import { canInviteRole, canManageTeam } from "@/lib/auth/rbac";
-import type { MembershipRole } from "@/lib/api/types";
+import type {
+  CompanyMembership,
+  CreateAccessLinkResponse,
+  MembershipRole,
+} from "@/lib/api/types";
+import { accessLinkMessage, accessLinkUrl } from "@/features/auth/access";
 import { friendlyError } from "@/lib/errors";
 import { breadcrumbsForPath, ROLE_LABEL } from "@/lib/nav";
 import { formatDateTime } from "@/lib/format";
@@ -61,10 +67,99 @@ const MEMBERSHIP_STATUS_LABEL: Record<string, string> = {
   REVOKED: "Removido",
 };
 
+function AccessLinkDialog({
+  link,
+  companyName,
+  onClose,
+}: {
+  link: CreateAccessLinkResponse | null;
+  companyName: string;
+  onClose: () => void;
+}) {
+  const url = link ? accessLinkUrl(link.token) : "";
+  const message = link
+    ? accessLinkMessage({
+        name: link.name || link.email,
+        companyName,
+        purpose: link.purpose,
+        url,
+      })
+    : "";
+  const isInvite = link?.purpose === "INVITE";
+
+  return (
+    <Dialog open={Boolean(link)} onOpenChange={(v) => (!v ? onClose() : null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {isInvite ? "Link de convite" : "Link para senha nova"}
+          </DialogTitle>
+          <DialogDescription>
+            {isInvite
+              ? `Mande para ${link?.name || link?.email}. Com ele a pessoa cria a senha e entra. Vale por 7 dias.`
+              : `Mande para ${link?.name || link?.email}. Com ele a pessoa cria uma senha nova; a antiga para de funcionar. Vale por 24 horas.`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input
+            readOnly
+            value={url}
+            data-testid="access-link-url"
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <p className="text-xs text-muted-foreground">
+            O link só pode ser usado uma vez. Gerar outro cancela este. Não
+            mande em grupo.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild className="flex-1 bg-[#1f8f4e] hover:bg-[#197a42]">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Enviar por WhatsApp
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(message);
+                  toast.success("Mensagem copiada");
+                } catch {
+                  toast.error("Não deu para copiar. Selecione o link acima.");
+                }
+              }}
+            >
+              Copiar mensagem
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TeamContent() {
-  const { role, user } = useAuth();
+  const { role, user, company } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [link, setLink] = useState<CreateAccessLinkResponse | null>(null);
+
+  const makeLink = useMutation({
+    mutationFn: (m: Pick<CompanyMembership, "id">) => createAccessLink(m.id),
+    onSuccess: (data) => setLink(data),
+    onError: (e) =>
+      toast.error(friendlyError(e, "Não foi possível gerar o link.")),
+  });
+
+  const canLinkFor = (m: CompanyMembership) =>
+    canManageTeam(role) &&
+    m.userId !== user?.id &&
+    m.status !== "REVOKED" &&
+    (m.role !== "OWNER" || role === "OWNER");
   const [statusFilter, setStatusFilter] = useState<string>("ACTIVE");
 
   const query = useQuery({
@@ -86,6 +181,7 @@ function TeamContent() {
     onSuccess: (data) => {
       toast.success(`Convite registrado para ${data.email}`);
       setOpen(false);
+      makeLink.mutate({ id: data.id });
       form.reset({ email: "", name: "", role: "AGENT" });
       void qc.invalidateQueries({ queryKey: ["memberships"] });
     },
@@ -143,8 +239,8 @@ function TeamContent() {
                   <DialogHeader>
                     <DialogTitle>Convidar membro</DialogTitle>
                     <DialogDescription>
-                      O convite fica pendente até a pessoa ativar a conta. Por
-                      enquanto o e-mail não é enviado automaticamente.
+                      Depois de convidar, você recebe um link para mandar por
+                      WhatsApp. Com ele a pessoa cria a senha e entra.
                     </DialogDescription>
                   </DialogHeader>
                   <form
@@ -191,10 +287,6 @@ function TeamContent() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      O convite fica pendente até a pessoa ativar a conta. Por
-                      enquanto o e-mail não é enviado automaticamente.
-                    </p>
                     <Button type="submit" disabled={invite.isPending}>
                       {invite.isPending ? "Enviando…" : "Registrar convite"}
                     </Button>
@@ -252,6 +344,19 @@ function TeamContent() {
                   </div>
                   {canManageTeam(role) && !isSelf && m.status !== "REVOKED" ? (
                     <div className="flex flex-wrap items-center gap-2">
+                      {canLinkFor(m) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={makeLink.isPending}
+                          data-testid="access-link-button"
+                          onClick={() => makeLink.mutate(m)}
+                        >
+                          {m.status === "INVITED"
+                            ? "Link de convite"
+                            : "Link para senha nova"}
+                        </Button>
+                      ) : null}
                       <Select
                         value={m.role}
                         onValueChange={(v) =>
@@ -301,6 +406,12 @@ function TeamContent() {
           })}
         </div>
       )}
+
+      <AccessLinkDialog
+        link={link}
+        companyName={company?.name ?? "loja"}
+        onClose={() => setLink(null)}
+      />
     </div>
   );
 }

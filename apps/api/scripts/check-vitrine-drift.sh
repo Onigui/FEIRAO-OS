@@ -16,7 +16,7 @@ if [ $status -ne 0 ]; then
   exit 1
 fi
 
-pattern='vehicles|vehicle_photos|vehicle_status_transitions|"fairs"|fair_participants|fair_vehicles|lead_vehicle_interests|showcase_analytics_events|"Vehicle|"Fair|ShowcaseAnalyticsType|showcase_enabled|showcase_terms|public_whatsapp|public_address|"city"'
+pattern='vehicles|vehicle_photos|vehicle_status_transitions|"fairs"|fair_participants|fair_vehicles|lead_vehicle_interests|showcase_analytics_events|"Vehicle|"Fair|ShowcaseAnalyticsType|showcase_enabled|showcase_terms|public_whatsapp|public_address|"city"|access_links'
 hits=$(echo "$out" | grep -v '^--' | grep -E "$pattern" || true)
 if [ -n "$hits" ]; then
   n=0

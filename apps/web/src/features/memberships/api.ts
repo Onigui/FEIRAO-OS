@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import type {
   CompanyMembership,
+  CreateAccessLinkResponse,
   CreateMembershipInput,
   CreateMembershipResponse,
   ListMembershipsQuery,
@@ -44,4 +45,11 @@ export function revokeMembership(id: string) {
   return apiRequest<RevokeMembershipResponse>(endpoints.memberships.byId(id), {
     method: "DELETE",
   });
+}
+
+export function createAccessLink(membershipId: string) {
+  return apiRequest<CreateAccessLinkResponse>(
+    endpoints.memberships.accessLink(membershipId),
+    { method: "POST" },
+  );
 }

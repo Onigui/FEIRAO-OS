@@ -5,6 +5,11 @@ export const endpoints = {
     refresh: "/api/auth/refresh",
     logout: "/api/auth/logout",
     me: "/api/auth/me",
+    changePassword: "/api/auth/change-password",
+    accessLink: (token: string) =>
+      `/api/auth/access-links/${encodeURIComponent(token)}`,
+    completeAccessLink: (token: string) =>
+      `/api/auth/access-links/${encodeURIComponent(token)}/complete`,
   },
   dashboard: {
     full: "/api/dashboard",
@@ -58,6 +63,7 @@ export const endpoints = {
     list: "/api/memberships",
     create: "/api/memberships",
     byId: (id: string) => `/api/memberships/${id}`,
+    accessLink: (id: string) => `/api/memberships/${id}/access-link`,
   },
   users: {
     sessions: (id: string) => `/api/users/${id}/sessions`,

@@ -35,7 +35,8 @@ Actions → **Banco — migrations e papel da aplicação** → *Run workflow* �
 Cria as tabelas, o usuário `autopilot_app` (sem `BYPASSRLS`) e a demonstração:
 4 lojas fictícias de Botucatu, 120 carros e o "Feirão de Novembro (demo)" publicado com 80 carros.
 Login da demonstração: `admin@vitrine.demo.autopilot.dev` / `Demo@12345` (gerente nas 4 lojas) e
-`dono.<slug-da-loja>@vitrine.demo.autopilot.dev`. **Troque as senhas antes de mostrar a qualquer pessoa.**
+`dono.<slug-da-loja>@vitrine.demo.autopilot.dev`. **Troque as senhas antes de mostrar a qualquer pessoa:**
+entre com cada conta e use **Minha senha** (menu lateral, ou `/conta`).
 
 A connection string da API é a do passo 1 com o usuário trocado:
 `postgresql://autopilot_app:<APP_DB_PASSWORD>@<host-do-neon>/<banco>?sslmode=require`

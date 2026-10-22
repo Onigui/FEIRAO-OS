@@ -105,6 +105,7 @@ describe('AuthService hardening (6A)', () => {
       accessPrincipal as never,
       revocation as never,
       config as never,
+      { write: jest.fn() } as never,
     );
 
     return { service, prisma, revocation, accessPrincipal };

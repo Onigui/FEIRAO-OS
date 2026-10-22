@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuditModule } from '../audit/audit.module';
+import { AccessLinksService } from './access-links.service';
 import { AccessPrincipalService } from './access-principal.service';
 import { AuthController } from './auth.controller';
 import { AuthRevocationService } from './auth-revocation.service';
@@ -35,6 +36,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AccessLinksService,
     AccessPrincipalService,
     AuthRevocationService,
     JwtStrategy,
@@ -44,6 +46,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   ],
   exports: [
     AuthService,
+    AccessLinksService,
     AccessPrincipalService,
     AuthRevocationService,
     JwtModule,

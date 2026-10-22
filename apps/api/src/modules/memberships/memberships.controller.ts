@@ -16,6 +16,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MembershipRole } from '@prisma/client';
 import type { Request } from 'express';
+import { AccessLinksService } from '../auth/access-links.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CompanyContextGuard } from '../auth/guards/company-context.guard';
@@ -32,7 +33,10 @@ import { MembershipsService } from './memberships.service';
 @UseGuards(JwtAuthGuard, CompanyContextGuard, RolesGuard)
 @Controller('memberships')
 export class MembershipsController {
-  constructor(private readonly membershipsService: MembershipsService) {}
+  constructor(
+    private readonly membershipsService: MembershipsService,
+    private readonly accessLinks: AccessLinksService,
+  ) {}
 
   @Get()
   @Roles(MembershipRole.OWNER, MembershipRole.ADMIN, MembershipRole.AGENT)
@@ -76,11 +80,35 @@ export class MembershipsController {
     });
   }
 
+  @Post(':id/access-link')
+  @HttpCode(HttpStatus.CREATED)
+  @Roles(MembershipRole.OWNER, MembershipRole.ADMIN)
+  @ApiOperation({
+    summary:
+      'Single-use link (invite activation or password reset) to send by WhatsApp',
+  })
+  createAccessLink(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ) {
+    return this.accessLinks.createForMembership(
+      user as AuthenticatedUser & {
+        cid: string;
+        sub: string;
+        role: MembershipRole;
+      },
+      id,
+      { ip: req.ip, userAgent: req.headers['user-agent'] },
+    );
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @Roles(MembershipRole.OWNER, MembershipRole.ADMIN)
   @ApiOperation({
-    summary: 'Revoke membership in current company (D2 — not global user disable)',
+    summary:
+      'Revoke membership in current company (D2 — not global user disable)',
   })
   revoke(
     @CurrentUser() user: AuthenticatedUser,

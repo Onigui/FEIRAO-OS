@@ -1,25 +1,25 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import {
-  CompanyStatus,
-  MembershipRole,
-  UserStatus,
-} from '@prisma/client';
+import { CompanyStatus, MembershipRole, UserStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AccessPrincipalService } from './access-principal.service';
 import {
   AUTH_MAX_SESSIONS_DEFAULT,
   MEMBERSHIP_STATUS_ACTIVE,
 } from './auth.constants';
 import { AuthRevocationService } from './auth-revocation.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { assertPasswordPolicy } from './password-policy';
 import type { AuthenticatedUser, JwtPayload } from './types/jwt-payload';
 
 export type MembershipSummary = {
@@ -48,6 +48,7 @@ export class AuthService {
     private readonly accessPrincipal: AccessPrincipalService,
     private readonly revocation: AuthRevocationService,
     config: ConfigService,
+    private readonly audit: AuditService,
   ) {
     this.accessTtl = config.get<string>('jwt.accessTtl', '15m');
     this.accessTtlSec = ttlToSeconds(this.accessTtl);
@@ -295,13 +296,12 @@ export class AuthService {
     let role: MembershipRole | null = session.membership?.role ?? null;
 
     if (membershipId && companyId) {
-      const active = await this.accessPrincipal.assertActiveMembershipForRefresh(
-        {
+      const active =
+        await this.accessPrincipal.assertActiveMembershipForRefresh({
           userId: session.userId,
           membershipId,
           companyId,
-        },
-      );
+        });
       membershipId = active.membershipId;
       companyId = active.companyId;
       role = active.role;
@@ -411,6 +411,84 @@ export class AuthService {
     return { ok: true as const, revokedSessions: result.revokedSessions };
   }
 
+  /**
+   * Etapa 6 — a pessoa troca a própria senha. Confere a senha atual e encerra as
+   * outras sessões (mantém só a deste aparelho).
+   */
+  async changePassword(
+    current: AuthenticatedUser,
+    dto: ChangePasswordDto,
+    meta?: RequestMeta,
+  ) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: current.sub, deletedAt: null },
+      select: { id: true, email: true, passwordHash: true },
+    });
+    const ok =
+      !!user?.passwordHash &&
+      (await argon2.verify(user.passwordHash, dto.currentPassword));
+    if (!user || !ok) {
+      // 400 (não 401): o painel trata 401 como sessão expirada e tentaria renovar o login.
+      throw new BadRequestException({
+        code: 'INVALID_CURRENT_PASSWORD',
+        message: 'Senha atual incorreta.',
+      });
+    }
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException({
+        code: 'SAME_PASSWORD',
+        message: 'A nova senha precisa ser diferente da atual.',
+      });
+    }
+    assertPasswordPolicy(dto.newPassword, user.email);
+    const passwordHash = await argon2.hash(dto.newPassword);
+    const now = new Date();
+
+    const [, sessions] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      }),
+      this.prisma.session.updateMany({
+        where: {
+          userId: user.id,
+          id: { not: current.sid },
+          revokedAt: null,
+          deletedAt: null,
+        },
+        data: { revokedAt: now },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: {
+          userId: user.id,
+          sessionId: { not: current.sid },
+          revokedAt: null,
+          deletedAt: null,
+        },
+        data: { revokedAt: now },
+      }),
+    ]);
+    await this.revocation.invalidateAccessCacheForUser(user.id);
+
+    if (current.cid) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.audit.write(tx, {
+          companyId: current.cid!,
+          actorUserId: user.id,
+          action: 'USER_PASSWORD_CHANGE',
+          targetType: 'USER',
+          targetId: user.id,
+          before: null,
+          after: { otherSessionsRevoked: sessions.count },
+          ip: meta?.ip,
+          userAgent: meta?.userAgent,
+        });
+      });
+    }
+
+    return { ok: true as const, otherSessionsRevoked: sessions.count };
+  }
+
   async me(current: AuthenticatedUser) {
     const user = await this.prisma.user.findFirst({
       where: { id: current.sub, deletedAt: null },
@@ -423,7 +501,13 @@ export class AuthService {
           where: { status: 'ACTIVE', deletedAt: null },
           include: {
             company: {
-              select: { id: true, name: true, slug: true, status: true, deletedAt: true },
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                status: true,
+                deletedAt: true,
+              },
             },
           },
           orderBy: { createdAt: 'asc' },
