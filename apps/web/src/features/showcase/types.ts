@@ -30,7 +30,18 @@ export type PublicVehicleCard = {
   store: Pick<PublicStore, "slug" | "name" | "city">;
 };
 
+export type PublicVehicleFair = {
+  slug: string;
+  name: string;
+  status: string;
+  startsAt: string;
+  endsAt: string;
+  venue: string;
+  priceCentsAtFair: number;
+};
+
 export type PublicVehicleDetail = PublicVehicleCard & {
+  fairs: PublicVehicleFair[];
   bodyType: string | null;
   color: string | null;
   description: string | null;

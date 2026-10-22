@@ -3,6 +3,7 @@ import type { MembershipRole } from "@/lib/api/types";
 export type NavItemId =
   | "dashboard"
   | "inventory"
+  | "fairs"
   | "showcase-settings"
   | "leads"
   | "conversations"
@@ -34,6 +35,7 @@ export function canAccessNav(
   const agentOps: NavItemId[] = [
     "dashboard",
     "inventory",
+    "fairs",
     "leads",
     "conversations",
     "follow-ups",

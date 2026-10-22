@@ -28,6 +28,8 @@ export const config = {
     "/settings",
     "/settings/:path*",
     "/inventory/:path*",
+    "/fairs",
+    "/fairs/:path*",
     "/ai/:path*",
     "/exports",
     "/diagnostics",

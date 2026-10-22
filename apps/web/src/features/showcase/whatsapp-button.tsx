@@ -10,6 +10,7 @@ export function WhatsAppButton({
   message,
   vehicleSlug,
   storeSlug,
+  fairSlug,
   label = "Chamar no WhatsApp",
   variant = "solid",
 }: {
@@ -17,6 +18,7 @@ export function WhatsAppButton({
   message: string;
   vehicleSlug?: string;
   storeSlug?: string;
+  fairSlug?: string;
   label?: string;
   variant?: "solid" | "outline";
 }) {
@@ -30,7 +32,7 @@ export function WhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       data-testid="whatsapp-button"
-      onClick={() => trackShowcase("WHATSAPP_CLICK", { vehicleSlug, storeSlug })}
+      onClick={() => trackShowcase("WHATSAPP_CLICK", { vehicleSlug, storeSlug, fairSlug })}
       className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold transition ${cls}`}
     >
       <MessageCircle className="h-5 w-5" aria-hidden />

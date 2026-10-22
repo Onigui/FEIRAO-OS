@@ -6,6 +6,8 @@ const TITLES: Record<string, string> = {
   "/inventory/new": "Cadastrar carro",
   "/inventory/import": "Importar planilha",
   "/settings/showcase": "Vitrine da loja",
+  "/fairs": "Feirões",
+  "/fairs/new": "Novo feirão",
   "/leads": "Leads",
   "/conversations": "Conversas",
   "/follow-ups": "Follow-ups",
@@ -33,6 +35,10 @@ export function pageTitleForPath(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname];
   if (pathname.startsWith("/leads/")) return "Detalhe do lead";
   if (pathname.startsWith("/inventory/")) return "Carro";
+  if (pathname.endsWith("/live")) return "Modo evento";
+  if (pathname.endsWith("/qr")) return "QR dos carros";
+  if (pathname.endsWith("/report")) return "Relatório do feirão";
+  if (pathname.startsWith("/fairs/")) return "Feirão";
   if (pathname.startsWith("/conversations/")) return "Conversa";
   if (pathname.startsWith("/follow-ups/")) return "Follow-up";
   return "Autopilot";
@@ -53,6 +59,18 @@ export function breadcrumbsForPath(pathname: string): Crumb[] {
   }
   if (pathname.startsWith("/inventory/")) {
     return [home, { label: "Estoque", href: "/inventory" }, { label: "Carro" }];
+  }
+  if (pathname === "/fairs") return [home, { label: "Feirões" }];
+  if (pathname === "/fairs/new") {
+    return [home, { label: "Feirões", href: "/fairs" }, { label: "Novo" }];
+  }
+  if (pathname.startsWith("/fairs/")) {
+    const id = pathname.split("/")[2];
+    const sub = pathname.split("/")[3];
+    const label = sub === "live" ? "Modo evento" : sub === "qr" ? "QR" : sub === "report" ? "Relatório" : null;
+    return label
+      ? [home, { label: "Feirões", href: "/fairs" }, { label: "Feirão", href: `/fairs/${id}` }, { label }]
+      : [home, { label: "Feirões", href: "/fairs" }, { label: "Feirão" }];
   }
   if (pathname === "/settings/showcase") {
     return [home, { label: "Configurações", href: "/settings" }, { label: "Vitrine" }];

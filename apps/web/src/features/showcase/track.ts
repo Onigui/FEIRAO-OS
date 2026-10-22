@@ -21,7 +21,7 @@ function dailySession(): string {
 
 export function trackShowcase(
   type: "PAGE_VIEW" | "WHATSAPP_CLICK" | "SEARCH",
-  target: { vehicleSlug?: string; storeSlug?: string } = {},
+  target: { vehicleSlug?: string; storeSlug?: string; fairSlug?: string } = {},
 ) {
   try {
     const body = JSON.stringify({ type, ...target, session: dailySession() });

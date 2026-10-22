@@ -7,14 +7,16 @@ import { trackShowcase } from "@/features/showcase/track";
 export function PageView({
   vehicleSlug,
   storeSlug,
+  fairSlug,
   search,
 }: {
   vehicleSlug?: string;
   storeSlug?: string;
+  fairSlug?: string;
   search?: boolean;
 }) {
   useEffect(() => {
-    trackShowcase(search ? "SEARCH" : "PAGE_VIEW", { vehicleSlug, storeSlug });
-  }, [vehicleSlug, storeSlug, search]);
+    trackShowcase(search ? "SEARCH" : "PAGE_VIEW", { vehicleSlug, storeSlug, fairSlug });
+  }, [vehicleSlug, storeSlug, fairSlug, search]);
   return null;
 }

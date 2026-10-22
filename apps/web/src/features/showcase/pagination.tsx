@@ -6,7 +6,10 @@ export function ShowcasePagination({
   params,
   page,
   totalPages,
+  keepStore = false,
 }: {
+  /** true quando "store" é filtro da URL (página do feirão), não parte do caminho. */
+  keepStore?: boolean;
   basePath: string;
   params: PublicListParams;
   page: number;
@@ -15,7 +18,7 @@ export function ShowcasePagination({
   if (totalPages <= 1) return null;
   const href = (p: number) => {
     const qs = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) if (v && k !== "page" && k !== "store") qs.set(k, v);
+    for (const [k, v] of Object.entries(params)) if (v && k !== "page" && (keepStore || k !== "store")) qs.set(k, v);
     if (p > 1) qs.set("page", String(p));
     const s = qs.toString();
     return s ? `${basePath}?${s}` : basePath;
