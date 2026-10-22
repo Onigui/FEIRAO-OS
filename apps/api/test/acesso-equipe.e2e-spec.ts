@@ -26,8 +26,8 @@ describe('Acesso da equipe (e2e)', () => {
   let ownerToken: string;
   const db = new PrismaClient();
   const suffix = randomUUID().slice(0, 8);
-  const memberEmail = `vendedor.${suffix}@acesso.e2e`;
-  const existingEmail = `ja-tem-conta.${suffix}@acesso.e2e`;
+  const memberEmail = `vendedor.${suffix}@acesso-e2e.dev`;
+  const existingEmail = `ja-tem-conta.${suffix}@acesso-e2e.dev`;
   const existingPassword = 'SenhaAntiga123';
   const otherCompanyId = randomUUID();
   const existingUserId = randomUUID();
@@ -59,13 +59,13 @@ describe('Acesso da equipe (e2e)', () => {
     if (app) await app.close();
   });
 
-  async function newLink(membershipId: string, token = ownerToken) {
+  function newLink(membershipId: string, token = ownerToken) {
     return api()
       .post(`/api/memberships/${membershipId}/access-link`)
       .set('Authorization', `Bearer ${token}`);
   }
 
-  async function login(email: string, password: string) {
+  function login(email: string, password: string) {
     return api().post('/api/auth/login').send({ email, password });
   }
 

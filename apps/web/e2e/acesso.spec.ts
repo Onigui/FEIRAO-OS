@@ -10,7 +10,7 @@ test.describe("Acesso da equipe — celular", () => {
 
   test("convite por link → vendedor cria senha, entra e troca a senha", async ({ page, browser }) => {
     const tag = Date.now().toString().slice(-7);
-    const email = `vendedor.${tag}@acesso.e2e`;
+    const email = `vendedor.${tag}@acesso-e2e.dev`;
 
     // 1. Dono convida e recebe o link.
     await login(page);
