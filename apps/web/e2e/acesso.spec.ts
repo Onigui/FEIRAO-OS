@@ -58,6 +58,8 @@ test.describe("Acesso da equipe — celular", () => {
     await phone.getByLabel("Senha", { exact: true }).fill("Vendedor2026");
     await phone.getByRole("button", { name: "Continuar" }).click();
     await phone.waitForURL("**/dashboard");
+    // Espera o painel terminar de carregar a loja antes de trocar de página (como o helper login).
+    await phone.locator('a[href="/inventory"]').first().waitFor({ state: "attached" });
 
     // 5. Troca a própria senha.
     await gotoAuthed(phone, "/conta");
