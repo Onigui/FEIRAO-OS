@@ -1,8 +1,12 @@
 FROM node:22-alpine AS base
 WORKDIR /app
+# Prisma precisa do OpenSSL no Alpine.
+RUN apk add --no-cache openssl
 
 FROM base AS deps
 COPY package.json package-lock.json ./
+# O postinstall roda "prisma generate", que precisa do schema.
+COPY prisma ./prisma
 RUN npm ci
 
 FROM base AS build

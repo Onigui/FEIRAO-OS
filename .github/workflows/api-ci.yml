@@ -124,3 +124,21 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # O mesmo Dockerfile que o Render usa: constrói e sobe a imagem contra o Postgres/Redis do CI.
+      - name: Imagem Docker (build + subir + /health)
+        run: |
+          docker build -t autopilot-api:ci .
+          docker run -d --name api-ci --network host \
+            -e NODE_ENV=production -e PORT=3099 \
+            -e DATABASE_URL="$DATABASE_URL" -e DB_ALLOW_BYPASS_ROLE=true \
+            -e REDIS_HOST=localhost -e REDIS_PORT=6379 \
+            -e JWT_ACCESS_SECRET=ci-docker-smoke-secret-with-32-chars-min \
+            autopilot-api:ci
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:3099/health/live && break
+            sleep 1
+          done
+          curl -fsS http://localhost:3099/health/ready || (docker logs api-ci; exit 1)
+          curl -fsS "http://localhost:3099/api/public/vehicles?limit=1" >/dev/null || (docker logs api-ci; exit 1)
+          docker rm -f api-ci
