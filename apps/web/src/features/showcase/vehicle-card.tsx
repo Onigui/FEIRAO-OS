@@ -7,14 +7,18 @@ import type { PublicVehicleCard } from "@/features/showcase/types";
 export function VehicleCard({
   vehicle: v,
   showStore = true,
+  fairSlug,
 }: {
   vehicle: PublicVehicleCard;
   showStore?: boolean;
+  /** Na página do feirão: o link leva a origem e os vendidos ganham a faixa. */
+  fairSlug?: string;
 }) {
+  const sold = v.status === "SOLD";
   return (
     <li>
       <Link
-        href={`/carro/${v.slug}`}
+        href={fairSlug ? `/carro/${v.slug}?feirao=${encodeURIComponent(fairSlug)}` : `/carro/${v.slug}`}
         className="group block overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative aspect-[4/3] bg-muted">
@@ -31,6 +35,11 @@ export function VehicleCard({
               <Car className="h-10 w-10" aria-hidden />
             </div>
           )}
+          {sold ? (
+            <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 -rotate-6 bg-red-600/90 py-1.5 text-center text-lg font-bold uppercase tracking-widest text-white">
+              Vendido
+            </span>
+          ) : null}
           {v.status === "RESERVED" ? (
             <span className="absolute left-2 top-2 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
               Reservado
@@ -44,7 +53,9 @@ export function VehicleCard({
           <h3 className="truncate font-semibold leading-tight">
             {v.model} {v.version ?? ""}
           </h3>
-          <p className="font-display text-xl text-primary">{formatPriceCents(v.priceCents)}</p>
+          <p className={`font-display text-xl ${sold ? "text-muted-foreground line-through" : "text-primary"}`}>
+            {formatPriceCents(v.priceCents)}
+          </p>
           <p className="text-xs text-muted-foreground">
             {formatKm(v.mileageKm)} · {TRANSMISSION_LABEL[v.transmission]} · {FUEL_LABEL[v.fuel]}
           </p>

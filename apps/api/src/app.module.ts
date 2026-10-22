@@ -18,6 +18,7 @@ import { FollowUpModule } from './modules/follow-up/follow-up.module';
 import { HealthModule } from './modules/health/health.module';
 import { ShowcaseConsentModule } from './modules/showcase/showcase-consent.module';
 import { ShowcaseModule } from './modules/showcase/showcase.module';
+import { FairsModule } from './modules/fairs/fairs.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { MembershipsModule } from './modules/memberships/memberships.module';
@@ -58,6 +59,7 @@ const workersInApi = (process.env.ASYNC_WORKERS_IN_API ?? 'true') === 'true';
     InventoryModule,
     ShowcaseConsentModule,
     ShowcaseModule,
+    FairsModule,
     AuthModule,
     CompaniesModule,
     UsersModule,

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { FUEL_LABEL, TRANSMISSION_LABEL } from "@/features/inventory/constants";
 import { formatKm, formatPriceCents, formatYears } from "@/features/inventory/format";
+import { formatFairPeriod } from "@/features/fairs/constants";
 import { whatsappMessage } from "@/features/showcase/constants";
 import { InterestForm } from "@/features/showcase/interest-form";
 import { PageView } from "@/features/showcase/page-view";
@@ -12,7 +13,12 @@ import { fetchPublicVehicle } from "@/features/showcase/server-api";
 import { ShareButton } from "@/features/showcase/share-button";
 import { WhatsAppButton } from "@/features/showcase/whatsapp-button";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -29,10 +35,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function VehiclePage({ params }: Props) {
+export default async function VehiclePage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const sp = await searchParams;
   const v = await fetchPublicVehicle(slug);
   if (!v) notFound();
+
+  // Veio da página do feirão ou do QR: atribui o contato e mostra o preço do evento.
+  const fairParam = first(sp.feirao);
+  const fromQr = first(sp.origem) === "qr";
+  const fair = v.fairs.find((f) => f.slug === fairParam) ?? null;
+  const badgeFair = fair ?? v.fairs[0] ?? null;
+  const fairPrice = fair && fair.priceCentsAtFair !== v.priceCents ? fair.priceCentsAtFair : null;
 
   const sold = v.status === "SOLD";
   const label = `${v.make} ${v.model} ${v.version ?? ""} ${v.yearModel}`.replace(/\s+/g, " ").trim();
@@ -48,7 +62,7 @@ export default async function VehiclePage({ params }: Props) {
 
   return (
     <div className="space-y-5">
-      <PageView vehicleSlug={v.slug} />
+      <PageView vehicleSlug={v.slug} fairSlug={fair?.slug} />
       <nav className="text-sm text-muted-foreground">
         <Link href="/vitrine" className="hover:underline">
           Vitrine
@@ -58,6 +72,22 @@ export default async function VehiclePage({ params }: Props) {
           {v.store.name}
         </Link>
       </nav>
+
+      {badgeFair && !sold ? (
+        <Link
+          href={`/feirao/${badgeFair.slug}`}
+          className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-accent/60 px-4 py-3 text-sm"
+          data-testid="fair-badge"
+        >
+          <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-bold uppercase text-primary-foreground">
+            {badgeFair.status === "LIVE" ? "No feirão agora" : "Vai estar no feirão"}
+          </span>
+          <span className="font-medium">{badgeFair.name}</span>
+          <span className="text-muted-foreground">
+            {formatFairPeriod(badgeFair.startsAt, badgeFair.endsAt)} · {badgeFair.venue}
+          </span>
+        </Link>
+      ) : null}
 
       {sold ? (
         <p className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white" data-testid="sold-banner">
@@ -96,9 +126,19 @@ export default async function VehiclePage({ params }: Props) {
             <h1 className="font-display text-3xl leading-tight" data-testid="vehicle-title">
               {v.model} {v.version ?? ""}
             </h1>
-            <p className={`font-display text-4xl ${sold ? "text-muted-foreground line-through" : "text-primary"}`}>
-              {formatPriceCents(v.priceCents)}
-            </p>
+            {fairPrice !== null && !sold ? (
+              <div>
+                <p className="text-sm text-muted-foreground line-through">{formatPriceCents(v.priceCents)}</p>
+                <p className="font-display text-4xl text-primary" data-testid="fair-price">
+                  {formatPriceCents(fairPrice)}
+                </p>
+                <p className="text-xs font-medium text-primary">Preço do feirão</p>
+              </div>
+            ) : (
+              <p className={`font-display text-4xl ${sold ? "text-muted-foreground line-through" : "text-primary"}`}>
+                {formatPriceCents(v.priceCents)}
+              </p>
+            )}
             {v.status === "RESERVED" ? (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
                 Reservado — fale com a loja para saber se ainda está disponível.
@@ -109,6 +149,7 @@ export default async function VehiclePage({ params }: Props) {
                 phone={v.store.whatsapp}
                 message={whatsappMessage({ ...v, code: v.code })}
                 vehicleSlug={v.slug}
+                fairSlug={fair?.slug}
               />
             ) : null}
             <ShareButton title={label} />
@@ -121,7 +162,8 @@ export default async function VehiclePage({ params }: Props) {
                 vehicleSlug={v.slug}
                 vehicleLabel={label}
                 storeName={v.store.name}
-                source="VEHICLE_PAGE"
+                source={fair ? (fromQr ? "QR" : "FAIR_PAGE") : "VEHICLE_PAGE"}
+                fairSlug={fair?.slug}
               />
             </section>
           ) : null}

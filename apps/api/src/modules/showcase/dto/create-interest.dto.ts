@@ -58,6 +58,13 @@ export class CreateInterestDto {
   @IsIn(SHOWCASE_INTEREST_SOURCES)
   source?: (typeof SHOWCASE_INTEREST_SOURCES)[number];
 
+  @ApiPropertyOptional({
+    description: 'Feirão de onde veio o contato (página do feirão ou QR)',
+  })
+  @IsOptional()
+  @Matches(/^[a-z0-9-]{3,160}$/)
+  fairSlug?: string;
+
   /** Campo-armadilha: invisível para pessoas; robôs preenchem. */
   @ApiPropertyOptional()
   @IsOptional()

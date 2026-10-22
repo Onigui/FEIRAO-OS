@@ -28,6 +28,7 @@ import {
   Flag,
   Car,
   Store,
+  Tent,
 } from "lucide-react";
 import { useAuth } from "@/providers/auth-provider";
 import { canAccessNav, type NavItemId } from "@/lib/auth/rbac";
@@ -49,6 +50,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { id: "dashboard", href: "/dashboard", label: "Painel", icon: LayoutDashboard, group: "ops" },
   { id: "inventory", href: "/inventory", label: "Estoque", icon: Car, group: "ops" },
+  { id: "fairs", href: "/fairs", label: "Feirões", icon: Tent, group: "ops" },
   { id: "leads", href: "/leads", label: "Leads", icon: Users, group: "ops" },
   { id: "conversations", href: "/conversations", label: "Conversas", icon: MessageSquare, group: "ops" },
   { id: "follow-ups", href: "/follow-ups", label: "Follow-ups", icon: CalendarClock, group: "ops" },

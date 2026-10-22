@@ -1,0 +1,17 @@
+/** Vitrine e Feirões — etapa 4 (feirões). */
+
+export const FAIR_MAX_DURATION_DAYS = 7;
+export const FAIR_MAX_VEHICLES_PER_REQUEST = 200;
+export const FAIR_MAX_INVITES_PER_REQUEST = 30;
+export const PUBLIC_FAIR_VEHICLES_MAX_LIMIT = 60;
+
+/** Auditoria. */
+export const FAIR_CREATE = 'FAIR_CREATE';
+export const FAIR_UPDATE = 'FAIR_UPDATE';
+export const FAIR_STATUS_CHANGE = 'FAIR_STATUS_CHANGE';
+export const FAIR_INVITE = 'FAIR_INVITE';
+export const FAIR_INVITE_REMOVE = 'FAIR_INVITE_REMOVE';
+export const FAIR_INVITE_RESPONSE = 'FAIR_INVITE_RESPONSE';
+export const FAIR_VEHICLES_ADD = 'FAIR_VEHICLES_ADD';
+export const FAIR_VEHICLE_UPDATE = 'FAIR_VEHICLE_UPDATE';
+export const FAIR_VEHICLE_REMOVE = 'FAIR_VEHICLE_REMOVE';

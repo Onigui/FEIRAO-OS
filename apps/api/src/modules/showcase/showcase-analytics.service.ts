@@ -34,12 +34,21 @@ export class ShowcaseAnalyticsService {
   async track(dto: TrackEventDto): Promise<void> {
     let companyId: string | null = null;
     let vehicleId: string | null = null;
+    let fairId: string | null = null;
 
     if (dto.vehicleSlug) {
       const v = await this.showcase.resolveVehicle(dto.vehicleSlug);
       if (!v) return;
       companyId = v.companyId;
       vehicleId = v.id;
+      if (dto.fairSlug) {
+        fairId =
+          (await this.showcase.resolveFairForVehicle(dto.fairSlug, v.id))?.id ??
+          null;
+      }
+    } else if (dto.fairSlug) {
+      fairId = await this.showcase.resolveFairId(dto.fairSlug);
+      if (!fairId) return;
     } else if (dto.storeSlug) {
       companyId = await this.showcase.resolveStoreId(dto.storeSlug);
       if (!companyId) return;
@@ -50,6 +59,7 @@ export class ShowcaseAnalyticsService {
         type: dto.type,
         companyId,
         vehicleId,
+        fairId,
         sessionHash: sessionHash(dto.session),
       },
     });

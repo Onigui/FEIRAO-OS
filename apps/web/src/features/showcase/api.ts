@@ -13,6 +13,7 @@ export type InterestInput = {
   consentContact: boolean;
   consentMarketing: boolean;
   source: InterestSource;
+  fairSlug?: string;
   website?: string;
 };
 

@@ -87,6 +87,10 @@ export class ShowcaseInterestService {
 
     const now = new Date();
     const companyId = vehicle.companyId;
+    const fair = dto.fairSlug
+      ? await this.showcase.resolveFairForVehicle(dto.fairSlug, vehicle.id)
+      : null;
+    const source = dto.source ?? (fair ? 'FAIR_PAGE' : 'VEHICLE_PAGE');
 
     const save = () =>
       runWithoutRlsPublicRead(() =>
@@ -126,7 +130,9 @@ export class ShowcaseInterestService {
                 leadId: lead.id,
                 vehicleId: vehicle.id,
                 intent: VehicleInterestIntent.INTEREST,
-                source: dto.source ?? 'VEHICLE_PAGE',
+                source,
+                fairId: fair?.id ?? null,
+                fairOrganizerCompanyId: fair?.companyId ?? null,
                 consentContactAt: now,
                 consentMarketingAt: dto.consentMarketing ? now : null,
                 consentTextVersion: SHOWCASE_CONSENT_TEXT_VERSION,
@@ -150,6 +156,7 @@ export class ShowcaseInterestService {
                 interestId: interest.id,
                 vehicleId: vehicle.id,
                 source: interest.source,
+                fairId: interest.fairId,
                 leadCreated: created,
                 marketingConsent: Boolean(dto.consentMarketing),
               },

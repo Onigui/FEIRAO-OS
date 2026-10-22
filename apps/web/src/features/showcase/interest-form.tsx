@@ -16,7 +16,9 @@ export function InterestForm({
   vehicleLabel,
   storeName,
   source = "VEHICLE_PAGE",
+  fairSlug,
 }: {
+  fairSlug?: string;
   vehicleSlug: string;
   vehicleLabel: string;
   storeName: string;
@@ -77,6 +79,7 @@ export function InterestForm({
               consentContact: true,
               consentMarketing: marketing,
               source,
+              fairSlug,
               website,
             }),
           );
