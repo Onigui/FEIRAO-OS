@@ -26,6 +26,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENC
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO autopilot_app;
 
 -- A aplicação nunca mexe no histórico de migrations.
-REVOKE ALL ON TABLE _prisma_migrations FROM autopilot_app;
+DO $$
+BEGIN
+  IF to_regclass('public._prisma_migrations') IS NOT NULL THEN
+    REVOKE ALL ON TABLE public._prisma_migrations FROM autopilot_app;
+  END IF;
+END $$;
 
 SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'autopilot_app';

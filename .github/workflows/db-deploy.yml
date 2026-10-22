@@ -1,0 +1,65 @@
+name: Banco — migrations e papel da aplicação
+
+# Roda as migrations no banco de produção (Neon) com o usuário dono e garante o
+# papel autopilot_app (sem BYPASSRLS) que a API usa. Opcional: seed da demonstração.
+# Segredos do repositório: MIGRATION_DATABASE_URL (dono) e APP_DB_PASSWORD.
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed_demo:
+        description: 'Rodar o seed da demonstração (4 lojas fictícias, 120 carros, 1 feirão)'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/prisma/migrations/**'
+      - 'apps/api/scripts/create-app-role.sql'
+
+concurrency:
+  group: db-deploy
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+    steps:
+      - name: Segredos configurados?
+        run: |
+          if [ -z "$MIGRATION_DATABASE_URL" ] || [ -z "$APP_DB_PASSWORD" ]; then
+            echo "::error::Configure os segredos MIGRATION_DATABASE_URL e APP_DB_PASSWORD (ver docs/deploy-vitrine-feiroes.md)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+
+      - run: npm ci
+
+      - name: Migrations
+        run: DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma migrate deploy
+
+      - name: Papel autopilot_app (sem BYPASSRLS)
+        run: |
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 \
+            -v app_password="'$APP_DB_PASSWORD'" -f scripts/create-app-role.sql
+
+      - name: Seed da demonstração
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_demo }}
+        run: |
+          npx prisma generate
+          DATABASE_URL="$MIGRATION_DATABASE_URL" NODE_ENV=production ALLOW_PROD_SEED=true npm run seed:vitrine

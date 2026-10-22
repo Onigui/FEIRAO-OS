@@ -48,6 +48,7 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://autopilot:autopilot@localhost:5432/autopilot?schema=public
+      DATABASE_URL_PLAIN: postgresql://autopilot:autopilot@localhost:5432/autopilot
       JWT_ACCESS_SECRET: ci-test-jwt-access-secret-32chars
       REDIS_HOST: localhost
       REDIS_PORT: '6379'
@@ -98,6 +99,19 @@ jobs:
           npm run seed:vitrine | tee /tmp/seed.log
           grep -q '"vehicles": 120' /tmp/seed.log
           grep -q '"fairVehicles": 80' /tmp/seed.log
+
+      - name: Backup e restauração (mesmo processo do db-backup.yml)
+        run: |
+          set -e
+          pg_dump "$DATABASE_URL_PLAIN" -Fc --no-owner --no-privileges -f /tmp/b.dump
+          gpg --batch --yes --pinentry-mode loopback --passphrase ci-pass --symmetric --cipher-algo AES256 -o /tmp/b.dump.gpg /tmp/b.dump
+          rm /tmp/b.dump
+          gpg --batch --yes --pinentry-mode loopback --passphrase ci-pass -o /tmp/r.dump -d /tmp/b.dump.gpg
+          psql "$DATABASE_URL_PLAIN" -c "DROP DATABASE IF EXISTS restore_check" -c "CREATE DATABASE restore_check"
+          pg_restore --no-owner --no-privileges -d "${DATABASE_URL_PLAIN%/*}/restore_check" /tmp/r.dump
+          n=$(psql "${DATABASE_URL_PLAIN%/*}/restore_check" -tAc "SELECT count(*) FROM vehicles")
+          echo "carros restaurados: $n"
+          test "$n" -ge 120
 
       - name: Build
         run: npm run build

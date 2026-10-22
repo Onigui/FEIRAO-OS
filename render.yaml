@@ -1,0 +1,65 @@
+# Render Blueprint — API (NestJS) + Redis (Key Value).
+# A web (Next.js) fica na Vercel; o banco no Neon. Ver docs/deploy-vitrine-feiroes.md.
+# Planos gratuitos: a API "dorme" após 15 min sem acesso (o workflow keepalive evita),
+# e o Key Value grátis não grava em disco (filas somem em reinício — ok com as automações desligadas).
+services:
+  - type: web
+    name: autopilot-api
+    runtime: docker
+    rootDir: apps/api
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: virginia
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health/live
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      # Usuário autopilot_app (sem BYPASSRLS) — ver scripts/create-app-role.sql
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: autopilot-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: autopilot-redis
+          property: port
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      # Vercel (proxy /backend) + balanceador do Render
+      - key: TRUST_PROXY_HOPS
+        value: "2"
+      - key: SWAGGER_ENABLED
+        value: "false"
+      - key: SHOWCASE_RETENTION_ENABLED
+        value: "true"
+      # Automações desligadas na demonstração
+      - key: ASYNC_FOLLOWUP_ENABLED
+        value: "false"
+      - key: ASYNC_RECONCILE_ENABLED
+        value: "false"
+      # Cloudflare R2 (fotos)
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_PUBLIC_BASE_URL
+        sync: false
+
+  - type: keyvalue
+    name: autopilot-redis
+    plan: free
+    region: virginia
+    maxmemoryPolicy: noeviction
+    ipAllowList: []

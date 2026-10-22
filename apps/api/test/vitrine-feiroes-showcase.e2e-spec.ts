@@ -447,16 +447,6 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
     await api().get('/api/showcase/stats').expect(401);
   });
 
-  it('limita contatos por IP (429)', async () => {
-    const v = await createVehicle('Limite');
-    process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1';
-    try {
-      await interest({ vehicleSlug: v.slug, phone: '1' }).expect(429);
-    } finally {
-      process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1000';
-    }
-  });
-
   it('LGPD: contato sem andamento há mais de 12 meses é anonimizado', async () => {
     const v = await createVehicle('Retencao');
     const old = randomCell();
@@ -500,5 +490,16 @@ describe('Vitrine e Feirões — vitrine pública e contatos (e2e)', () => {
     });
     expect(stays.phone).toBe(kept.stored);
     expect(stays.deletedAt).toBeNull();
+  });
+
+  // Por último: estourar o limite bloqueia este IP por 1 minuto.
+  it('limita contatos por IP (429)', async () => {
+    const v = await createVehicle('Limite');
+    process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1';
+    try {
+      await interest({ vehicleSlug: v.slug, phone: '1' }).expect(429);
+    } finally {
+      process.env.SHOWCASE_INTEREST_LIMIT_PER_MIN = '1000';
+    }
   });
 });
