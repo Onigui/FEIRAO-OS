@@ -11,7 +11,9 @@ BEGIN
   END IF;
 END $$;
 
-ALTER ROLE autopilot_app WITH LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD :app_password;
+-- Só senha e login: no Neon o dono não é superusuário e não pode mexer nos atributos
+-- SUPERUSER/BYPASSRLS (o papel já nasce sem eles no CREATE acima; a API confere ao subir).
+ALTER ROLE autopilot_app WITH LOGIN PASSWORD :app_password;
 
 SELECT format('GRANT CONNECT ON DATABASE %I TO autopilot_app', current_database()) \gexec
 
