@@ -102,8 +102,20 @@ jobs:
           npm run seed:test
           npm run build
 
+      # Como em produção: a API usa o papel sem BYPASSRLS; o RLS vale de verdade nos testes.
+      - name: Banco — papel da aplicação (sem BYPASSRLS)
+        working-directory: apps/api
+        run: |
+          psql "postgresql://autopilot:autopilot@localhost:5432/autopilot" -v ON_ERROR_STOP=1 \
+            -v app_password="'app-e2e-password'" -f scripts/create-app-role.sql
+          psql "postgresql://autopilot:autopilot@localhost:5432/autopilot" -v ON_ERROR_STOP=1 \
+            -v app_password="'app-e2e-password'" -f scripts/create-app-role.sql
+
       - name: API — start
         working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://autopilot_app:app-e2e-password@localhost:5432/autopilot?schema=public
+          TRUST_PROXY_HOPS: '1'
         run: |
           nohup node dist/main > /tmp/api.log 2>&1 &
           for i in $(seq 1 60); do
@@ -130,6 +142,22 @@ jobs:
       - name: Playwright — testes
         working-directory: apps/web
         run: npm run e2e
+
+      - name: Diagnóstico da API pública em caso de falha
+        if: failure()
+        run: |
+          API=http://localhost:3001/api/public
+          out=""
+          for slug in $(curl -fsS "$API/vehicles?limit=3" | python3 -c "import json,sys;[print(v['slug']) for v in json.load(sys.stdin)['data']]"); do
+            out="$out | GET vehicles/$slug -> $(curl -sS -o /tmp/b -w '%{http_code}' "$API/vehicles/$slug") $(head -c 300 /tmp/b)"
+          done
+          for code in $(psql "postgresql://autopilot:autopilot@localhost:5432/autopilot" -tAc "select qr_code from fair_vehicles order by added_at desc limit 2"); do
+            out="$out | GET q/$code -> $(curl -sS -o /tmp/b -w '%{http_code}' "$API/q/$code") $(head -c 300 /tmp/b)"
+          done
+          echo "::error title=api-publica::$(echo "$out" | tr '\n' ' ')"
+          for f in $(find apps/web/test-results -name 'error-context.md' 2>/dev/null | head -3); do
+            echo "::error title=pagina $(basename $(dirname $f))::$(head -c 2500 "$f" | tr '\n' ' ')"
+          done
 
       - name: Logs em caso de falha
         if: failure()

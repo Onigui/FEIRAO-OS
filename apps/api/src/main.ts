@@ -1,9 +1,12 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { assertAppDbRoleRespectsRls } from './prisma/db-role-guard';
+import { PrismaService } from './prisma/prisma.service';
 import {
   shutdownOpenTelemetry,
   startOpenTelemetry,
@@ -13,11 +16,21 @@ import { StructuredLogger } from './observability/structured-logger';
 async function bootstrap() {
   startOpenTelemetry();
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new StructuredLogger(),
   });
   app.enableShutdownHooks();
   const configService = app.get(ConfigService);
+
+  // Atrás da Vercel (proxy /backend) e do balanceador do host, o IP do cliente
+  // vem em X-Forwarded-For. Sem isso, o limite por IP vale para todos juntos.
+  const trustHops = configService.get<number>('proxy.trustHops', 0);
+  if (trustHops > 0) app.set('trust proxy', trustHops);
+
+  await assertAppDbRoleRespectsRls(app.get(PrismaService), {
+    nodeEnv: configService.get<string>('nodeEnv', 'development'),
+    allowBypass: process.env.DB_ALLOW_BYPASS_ROLE === 'true',
+  });
 
   const port = configService.get<number>('port', 3001);
   const apiPrefix = configService.get<string>('apiPrefix', 'api');

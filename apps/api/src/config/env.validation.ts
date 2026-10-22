@@ -18,8 +18,16 @@ export const envValidationSchema = Joi.object({
   THROTTLE_TTL_MS: Joi.number().default(60_000),
   THROTTLE_LIMIT: Joi.number().default(120),
   THROTTLE_AUTH_LIMIT: Joi.number().default(20),
+  /** Quantos proxies confiáveis há na frente da API (Vercel + Render = 2). 0 = desligado. */
+  TRUST_PROXY_HOPS: Joi.number().integer().min(0).max(5).default(0),
+
+  /** Vitrine: anonimiza pedidos de contato sem andamento (LGPD). */
+  SHOWCASE_RETENTION_ENABLED: Joi.boolean().default(false),
+  SHOWCASE_RETENTION_MONTHS: Joi.number().integer().min(1).max(60).default(12),
 
   DATABASE_URL: Joi.string().min(1).required(),
+  /** Só para emergência: deixa a API subir com usuário de banco que ignora RLS. */
+  DB_ALLOW_BYPASS_ROLE: Joi.string().valid('true', 'false').optional(),
 
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().default(6379),

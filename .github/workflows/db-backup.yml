@@ -1,0 +1,50 @@
+name: Banco — backup diário
+
+# pg_dump do banco de produção, CRIPTOGRAFADO (o repositório é público e os
+# artefatos podem ser baixados por qualquer pessoa logada no GitHub).
+# Guarda 14 dias. Segredos: MIGRATION_DATABASE_URL e BACKUP_PASSPHRASE.
+# Restaurar: ver docs/deploy-vitrine-feiroes.md.
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # 03:17 em Brasília
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Segredos configurados?
+        id: check
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "Backup desligado: faltam MIGRATION_DATABASE_URL ou BACKUP_PASSPHRASE."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: pg_dump (cliente mais novo do PGDG, serve para qualquer versão do servidor) e criptografia
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+          pg_dump --version
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          pg_dump "$DB_URL" -Fc --no-owner --no-privileges -f "backup-$STAMP.dump"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "backup-$STAMP.dump.gpg" "backup-$STAMP.dump"
+          rm "backup-$STAMP.dump"
+          ls -lh backup-*.gpg
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.skip != 'true'
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup-*.dump.gpg
+          retention-days: 14
+          if-no-files-found: error

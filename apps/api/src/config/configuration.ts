@@ -288,6 +288,17 @@ export default () => {
         10,
       ),
     },
+    proxy: {
+      trustHops: parseInt(process.env.TRUST_PROXY_HOPS ?? '0', 10),
+    },
+    showcase: {
+      retentionEnabled:
+        (process.env.SHOWCASE_RETENTION_ENABLED ?? 'false') === 'true',
+      retentionMonths: parseInt(
+        process.env.SHOWCASE_RETENTION_MONTHS ?? '12',
+        10,
+      ),
+    },
     throttle: {
       ttlMs: parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
       limit: parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),

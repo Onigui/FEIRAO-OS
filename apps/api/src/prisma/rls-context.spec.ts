@@ -1,42 +1,26 @@
-import {
-  getRlsTxDepth,
-  isRlsBypass,
-  runWithRlsBypass,
-  runWithRlsBypassAsync,
-  runWithRlsTxDepth,
-} from './rls-context';
+import { isRlsPublicRead, runWithRlsPublicRead, runWithoutRlsPublicRead } from './rls-context';
 
-describe('rls-context (8B)', () => {
-  it('defaults bypass and depth to off/0', () => {
-    expect(isRlsBypass()).toBe(false);
-    expect(getRlsTxDepth()).toBe(0);
+/** Imita a PrismaPromise: só executa (e lê o contexto) quando alguém chama then(). */
+function lazyQuery(): PromiseLike<boolean> {
+  return {
+    then(onFulfilled, onRejected) {
+      return Promise.resolve(isRlsPublicRead()).then(onFulfilled, onRejected);
+    },
+  };
+}
+
+describe('runWithRlsPublicRead', () => {
+  it('consulta preguiçosa roda DENTRO do contexto de leitura pública', async () => {
+    await expect(runWithRlsPublicRead(() => lazyQuery())).resolves.toBe(true);
   });
 
-  it('runWithRlsBypass scopes the flag', () => {
-    expect(isRlsBypass()).toBe(false);
-    runWithRlsBypass(() => {
-      expect(isRlsBypass()).toBe(true);
-    });
-    expect(isRlsBypass()).toBe(false);
+  it('fora do helper continua desligado', async () => {
+    await expect(Promise.resolve(lazyQuery())).resolves.toBe(false);
   });
 
-  it('runWithRlsBypassAsync scopes the flag for async work', async () => {
-    await runWithRlsBypassAsync(async () => {
-      expect(isRlsBypass()).toBe(true);
-      await Promise.resolve();
-      expect(isRlsBypass()).toBe(true);
-    });
-    expect(isRlsBypass()).toBe(false);
-  });
-
-  it('runWithRlsTxDepth nests depth', () => {
-    runWithRlsTxDepth(1, () => {
-      expect(getRlsTxDepth()).toBe(1);
-      runWithRlsTxDepth(2, () => {
-        expect(getRlsTxDepth()).toBe(2);
-      });
-      expect(getRlsTxDepth()).toBe(1);
-    });
-    expect(getRlsTxDepth()).toBe(0);
+  it('runWithoutRlsPublicRead desliga mesmo dentro de uma leitura pública', async () => {
+    await expect(
+      runWithRlsPublicRead(() => runWithoutRlsPublicRead(() => lazyQuery())),
+    ).resolves.toBe(false);
   });
 });

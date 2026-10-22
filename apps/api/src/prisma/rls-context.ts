@@ -39,11 +39,17 @@ export function isRlsPublicRead(): boolean {
   return rlsPublicReadAls.getStore() === true;
 }
 
-export function runWithRlsPublicRead<T>(fn: () => T): T {
-  return rlsPublicReadAls.run(true, fn);
+/**
+ * Atenção: consultas do Prisma são preguiçosas (só rodam no `await`). Por isso o
+ * `await` acontece AQUI DENTRO do contexto; devolver a PrismaPromise sem esperar
+ * faria a consulta rodar fora dele, sem `app.public_read` (bug achado no e2e com
+ * o papel sem BYPASSRLS).
+ */
+export function runWithRlsPublicRead<T>(fn: () => T | PromiseLike<T>): Promise<T> {
+  return rlsPublicReadAls.run(true, async () => await fn());
 }
 
 /** Explicitly turns public read off (e.g. tenant writes inside a public request). */
-export function runWithoutRlsPublicRead<T>(fn: () => T): T {
-  return rlsPublicReadAls.run(false, fn);
+export function runWithoutRlsPublicRead<T>(fn: () => T | PromiseLike<T>): Promise<T> {
+  return rlsPublicReadAls.run(false, async () => await fn());
 }

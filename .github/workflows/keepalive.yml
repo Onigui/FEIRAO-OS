@@ -1,0 +1,19 @@
+name: API — manter acordada
+
+# O plano grátis do Render desliga a API após 15 min sem acesso (a 1ª visita
+# depois espera ~1 min). Durante o horário das lojas, pinga /health/live
+# (não toca no banco, então o Neon continua podendo dormir).
+# Liga quando a variável do repositório API_PUBLIC_URL existir.
+
+on:
+  schedule:
+    - cron: '*/10 10-23 * * *' # 07:00–20:59 em Brasília
+  workflow_dispatch:
+
+jobs:
+  ping:
+    if: ${{ vars.API_PUBLIC_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS --retry 3 --retry-delay 10 --max-time 90 "${{ vars.API_PUBLIC_URL }}/health/live"
