@@ -103,6 +103,9 @@ jobs:
       - name: Backup e restauração (mesmo processo do db-backup.yml)
         run: |
           set -e
+          trap 'echo "::error title=backup::$(tail -c 2000 /tmp/backup.err | tr "\n" " ")"' ERR
+          exec 2> >(tee /tmp/backup.err >&2)
+          pg_dump --version; psql --version
           pg_dump "$DATABASE_URL_PLAIN" -Fc --no-owner --no-privileges -f /tmp/b.dump
           gpg --batch --yes --pinentry-mode loopback --passphrase ci-pass --symmetric --cipher-algo AES256 -o /tmp/b.dump.gpg /tmp/b.dump
           rm /tmp/b.dump
