@@ -33,7 +33,18 @@ export type PublicVehicleCard = {
   store: Pick<PublicStore, 'slug' | 'name' | 'city'>;
 };
 
+export type PublicVehicleFair = {
+  slug: string;
+  name: string;
+  status: string;
+  startsAt: Date;
+  endsAt: Date;
+  venue: string;
+  priceCentsAtFair: number;
+};
+
 export type PublicVehicleDetail = PublicVehicleCard & {
+  fairs: PublicVehicleFair[];
   bodyType: string | null;
   color: string | null;
   description: string | null;
@@ -128,12 +139,38 @@ export class PublicShowcaseService {
         include: {
           company: { select: STORE_SELECT },
           photos: { orderBy: { sortOrder: 'asc' } },
+          fairVehicles: {
+            where: {
+              fair: {
+                deletedAt: null,
+                status: { in: ['PUBLISHED', 'LIVE'] },
+                endsAt: { gte: new Date() },
+              },
+            },
+            select: {
+              priceCentsAtFair: true,
+              fair: {
+                select: {
+                  slug: true,
+                  name: true,
+                  status: true,
+                  startsAt: true,
+                  endsAt: true,
+                  venue: true,
+                },
+              },
+            },
+          },
         },
       }),
     );
     if (!v) throw new NotFoundException('Veículo não encontrado');
     return {
       ...this.toCard(v),
+      // Selo do feirão: em que feirão publicado o carro está (preço do evento).
+      fairs: v.fairVehicles
+        .map((fv) => ({ ...fv.fair, priceCentsAtFair: fv.priceCentsAtFair }))
+        .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
       bodyType: v.bodyType,
       color: v.color,
       description: v.description,
@@ -187,6 +224,35 @@ export class PublicShowcaseService {
         },
       }),
     );
+  }
+
+  /** Feirão público em que o carro está inscrito (para atribuir contato e cliques ao feirão). */
+  async resolveFairForVehicle(fairSlug: string, vehicleId: string) {
+    return runWithRlsPublicRead(() =>
+      this.prisma.fair.findFirst({
+        where: {
+          slug: fairSlug,
+          deletedAt: null,
+          status: { in: ['PUBLISHED', 'LIVE', 'ENDED'] },
+          vehicles: { some: { vehicleId } },
+        },
+        select: { id: true, companyId: true },
+      }),
+    );
+  }
+
+  async resolveFairId(fairSlug: string): Promise<string | null> {
+    const f = await runWithRlsPublicRead(() =>
+      this.prisma.fair.findFirst({
+        where: {
+          slug: fairSlug,
+          deletedAt: null,
+          status: { in: ['PUBLISHED', 'LIVE', 'ENDED'] },
+        },
+        select: { id: true },
+      }),
+    );
+    return f?.id ?? null;
   }
 
   async resolveStoreId(slug: string): Promise<string | null> {

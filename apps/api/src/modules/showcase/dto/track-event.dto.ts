@@ -23,6 +23,11 @@ export class TrackEventDto {
   @Matches(/^[a-z0-9-]{1,80}$/)
   storeSlug?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Matches(/^[a-z0-9-]{3,160}$/)
+  fairSlug?: string;
+
   /** Identificador anônimo gerado no navegador, trocado todo dia. */
   @ApiProperty()
   @Matches(/^[A-Za-z0-9_-]{8,64}$/)
