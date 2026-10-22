@@ -111,7 +111,13 @@ jobs:
           rm /tmp/b.dump
           gpg --batch --yes --pinentry-mode loopback --passphrase ci-pass -o /tmp/r.dump -d /tmp/b.dump.gpg
           psql "$DATABASE_URL_PLAIN" -c "DROP DATABASE IF EXISTS restore_check" -c "CREATE DATABASE restore_check"
-          pg_restore --no-owner --no-privileges -d "${DATABASE_URL_PLAIN%/*}/restore_check" /tmp/r.dump
+          # Cliente mais novo que o servidor do CI (16) emite "SET transaction_timeout", que o 16
+          # não conhece; esse único aviso é aceito. Qualquer outro erro falha o passo.
+          pg_restore --no-owner --no-privileges -d "${DATABASE_URL_PLAIN%/*}/restore_check" /tmp/r.dump 2> /tmp/restore.err || true
+          cat /tmp/restore.err
+          if grep -v -e 'transaction_timeout' -e 'errors ignored on restore' -e '^Command was' /tmp/restore.err | grep -q .; then
+            exit 1
+          fi
           n=$(psql "${DATABASE_URL_PLAIN%/*}/restore_check" -tAc "SELECT count(*) FROM vehicles")
           echo "carros restaurados: $n"
           test "$n" -ge 120
