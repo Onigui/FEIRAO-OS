@@ -1116,3 +1116,34 @@ export type AiClassifyResponse = {
   matchedKinds: KnowledgeBaseKind[];
   rationale: string;
 };
+
+/** Etapa 6 — acesso da equipe (link de convite / redefinição enviado por WhatsApp). */
+export type AccessLinkPurpose = "INVITE" | "PASSWORD_RESET";
+
+export type CreateAccessLinkResponse = {
+  token: string;
+  purpose: AccessLinkPurpose;
+  expiresAt: string;
+  email: string;
+  name: string;
+};
+
+export type AccessLinkInfo = {
+  purpose: AccessLinkPurpose;
+  /** SET_PASSWORD: escolher senha. CONFIRM_EXISTING: já tem conta, confirma com a senha atual. */
+  mode: "SET_PASSWORD" | "CONFIRM_EXISTING";
+  email: string;
+  name: string;
+  companyName: string;
+  expiresAt: string;
+};
+
+export type CompleteAccessLinkInput = {
+  password?: string;
+  currentPassword?: string;
+};
+
+export type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
+};

@@ -36,6 +36,12 @@ export default function LoginPage() {
     defaultValues: { email: "", password: "" },
   });
 
+  // Vindo do link de acesso (/acesso/...): e-mail já preenchido.
+  useEffect(() => {
+    const email = new URLSearchParams(window.location.search).get("email");
+    if (email) form.setValue("email", email);
+  }, [form]);
+
   useEffect(() => {
     if (bootstrapping || submitting) return;
     if (user && hasCompany) {
